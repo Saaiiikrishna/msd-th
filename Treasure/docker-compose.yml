@@ -1,0 +1,63 @@
+version: "3.9"
+services:
+  postgres:
+    image: postgis/postgis:15-3.4
+    environment:
+      POSTGRES_DB: treasure
+      POSTGRES_USER: treasure
+      POSTGRES_PASSWORD: treasure
+    ports: ["5432:5432"]
+    volumes: [ "pgdata:/var/lib/postgresql/data" ]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U treasure -d treasure"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7.2-alpine
+    ports: ["6379:6379"]
+    command: ["redis-server","--save","","--appendonly","no"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  kafka:
+    image: bitnami/kafka:3.7
+    ports: ["9092:9092"]
+    environment:
+      KAFKA_ENABLE_KRAFT: "yes"
+      KAFKA_CFG_NODE_ID: "1"
+      KAFKA_CFG_PROCESS_ROLES: "controller,broker"
+      KAFKA_CFG_CONTROLLER_QUORUM_VOTERS: "1@kafka:29093"
+      KAFKA_CFG_LISTENERS: "PLAINTEXT://:9092,CONTROLLER://:29093"
+      KAFKA_CFG_ADVERTISED_LISTENERS: "PLAINTEXT://localhost:9092"
+      KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: "CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT"
+      KAFKA_CFG_INTER_BROKER_LISTENER_NAME: "PLAINTEXT"
+      KAFKA_CFG_CONTROLLER_LISTENER_NAMES: "CONTROLLER"
+      KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE: "true"
+      ALLOW_PLAINTEXT_LISTENER: "yes"
+    volumes: [ "kafkadata:/bitnami/kafka" ]
+    healthcheck:
+      test: ["CMD-SHELL","kafka-topics.sh --bootstrap-server localhost:9092 --list > /dev/null 2>&1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    depends_on: [ zipkin ]
+
+  kafdrop:
+    image: obsidiandynamics/kafdrop:4.0.1
+    environment:
+      KAFKA_BROKERCONNECT: "kafka:9092"
+    ports: ["9000:9000"]
+    depends_on: [ kafka ]
+
+  zipkin:
+    image: openzipkin/zipkin:2.24
+    ports: ["9411:9411"]
+
+volumes:
+  pgdata:
+  kafkadata:

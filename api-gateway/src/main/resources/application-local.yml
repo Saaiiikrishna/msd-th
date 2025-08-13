@@ -1,0 +1,120 @@
+server:
+  port: 8090  # Different port to avoid conflicts
+
+spring:
+  application:
+    name: api-gateway
+
+  # Redis Configuration for Rate Limiting (disabled for initial testing)
+  # data:
+  #   redis:
+  #     host: localhost
+  #     port: 6379
+  #     password:
+  #     database: 0
+  #     timeout: 2000ms
+  #     lettuce:
+  #       pool:
+  #         max-active: 8
+  #         max-idle: 8
+  #         min-idle: 0
+
+  # Cloud Gateway Configuration
+  cloud:
+    # Disable Spring Cloud compatibility check for Spring Boot 3.5.4
+    compatibility-verifier:
+      enabled: false
+    gateway:
+      # Global CORS Configuration
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowedOriginPatterns: 
+              - "http://localhost:3000"
+              - "https://*.mysillydreams.com"
+              - "https://*.vercel.app"
+            allowedMethods:
+              - GET
+              - POST
+              - PUT
+              - DELETE
+              - OPTIONS
+              - PATCH
+            allowedHeaders:
+              - "*"
+            allowCredentials: true
+            maxAge: 3600
+
+      # Default Filters
+      default-filters:
+        - DedupeResponseHeader=Access-Control-Allow-Credentials Access-Control-Allow-Origin
+        - AddResponseHeader=X-Response-Default-Foo, Default-Bar
+
+      # Discovery Configuration
+      discovery:
+        locator:
+          enabled: false
+          lower-case-service-id: true
+
+# Management and Monitoring
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus,gateway
+  endpoint:
+    health:
+      show-details: always
+    gateway:
+      enabled: true
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+
+# Logging Configuration
+logging:
+  level:
+    org.springframework.cloud.gateway: DEBUG
+    org.springframework.cloud.gateway.route.RouteDefinitionLocator: INFO
+    reactor.netty: INFO
+    com.mysillydreams.gateway: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+
+# Service Discovery (disabled for now)
+eureka:
+  client:
+    enabled: false
+
+# Custom Gateway Configuration
+gateway:
+  security:
+    jwt:
+      secret: treasure-hunt-jwt-secret-key-2025
+      expiration: 86400000 # 24 hours
+    
+  rate-limiting:
+    enabled: false
+    default-requests-per-second: 10
+    default-burst-capacity: 20
+    
+  circuit-breaker:
+    enabled: true
+    failure-threshold: 5
+    timeout: 5000ms
+    
+  retry:
+    enabled: true
+    max-attempts: 3
+    backoff-delay: 1000ms
+
+# Service URLs for local development
+services:
+  treasure-service:
+    url: http://localhost:8080
+  payment-service:
+    url: http://localhost:8081
+  frontend:
+    url: http://localhost:3000

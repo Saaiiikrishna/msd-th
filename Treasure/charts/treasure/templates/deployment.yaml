@@ -1,0 +1,51 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "treasure.fullname" . }}
+  labels: {{- include "treasure.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels: {{- include "treasure.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels: {{- include "treasure.selectorLabels" . | nindent 8 }}
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+    spec:
+      containers:
+        - name: app
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 8080
+            - name: grpc
+              containerPort: {{ .Values.grpc.serverPort }}
+          env:
+            - name: SPRING_DATASOURCE_URL
+              value: {{ .Values.env.SPRING_DATASOURCE_URL | quote }}
+            - name: SPRING_DATASOURCE_USERNAME
+              valueFrom: { secretKeyRef: { name: {{ include "treasure.fullname" . }}-secrets, key: db-username } }
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom: { secretKeyRef: { name: {{ include "treasure.fullname" . }}-secrets, key: db-password } }
+            - name: SPRING_REDIS_HOST
+              value: {{ .Values.env.SPRING_REDIS_HOST | quote }}
+            - name: SPRING_REDIS_PORT
+              value: {{ .Values.env.SPRING_REDIS_PORT | quote }}
+            - name: SPRING_KAFKA_BOOTSTRAP_SERVERS
+              value: {{ .Values.env.SPRING_KAFKA_BOOTSTRAP_SERVERS | quote }}
+            - name: MANAGEMENT_ZIPKIN_TRACING_ENDPOINT
+              value: {{ .Values.env.ZIPKIN_ENDPOINT | quote }}
+            - name: GRPC_SERVER_PORT
+              value: "{{ .Values.grpc.serverPort }}"
+          readinessProbe:
+            httpGet: { path: /actuator/health/readiness, port: http }
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: { path: /actuator/health/liveness, port: http }
+            initialDelaySeconds: 20
+            periodSeconds: 20
+          resources: {{- toYaml .Values.resources | nindent 12 }}

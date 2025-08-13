@@ -1,0 +1,81 @@
+# Test configuration for Payment Service with Razorpay Test Mode using Docker PostgreSQL
+spring:
+  application:
+    name: payment-service-test
+  datasource:
+    url: jdbc:postgresql://localhost:5434/payment_service
+    username: payment_user
+    password: payment_pass
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+    show-sql: true
+  flyway:
+    enabled: false
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+  kafka:
+    bootstrap-servers: localhost:9092
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+    consumer:
+      group-id: payment-service-test
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+  data:
+    redis:
+      host: localhost
+      port: 6379
+  zipkin:
+    base-url: http://localhost:9411
+
+server:
+  port: 8081
+
+# Razorpay Test Configuration
+payment:
+  razorpay:
+    key-id: rzp_test_fQluXDFtJjH3vV
+    key-secret: aBO9FVztNddcnjnoosqVrmHO
+    merchant:
+      name: "Treasure Hunt"
+      brand: "MySillyDreams"
+    webhook:
+      secret: treasure_hunt_webhook_secret_2025
+      endpoint: http://localhost:8081/api/payments/v1/webhooks/razorpay
+    payout:
+      account-id: acc_test_placeholder  # Will be configured after RazorpayX setup
+  commission:
+    percent: 2.5 # 2.5% commission for testing
+
+# Commission configuration for the application
+app:
+  commission:
+    percent: 2.5
+
+# Kafka is enabled and configured above
+
+logging:
+  level:
+    root: INFO
+    com.mysillydreams.payment: DEBUG
+    com.razorpay: DEBUG
+    org.springframework.web: DEBUG
+
+# Test mode indicators
+razorpay:
+  test:
+    mode: true
+    
+# Swagger UI configuration
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: true

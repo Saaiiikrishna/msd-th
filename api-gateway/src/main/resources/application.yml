@@ -1,0 +1,123 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: api-gateway
+  
+  # Redis Configuration for Rate Limiting
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      database: 0
+      timeout: 2000ms
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 0
+
+  # Cloud Gateway Configuration
+  cloud:
+    gateway:
+      # Global CORS Configuration
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowedOriginPatterns: 
+              - "http://localhost:3000"
+              - "https://*.mysillydreams.com"
+              - "https://*.vercel.app"
+            allowedMethods:
+              - GET
+              - POST
+              - PUT
+              - DELETE
+              - OPTIONS
+              - PATCH
+            allowedHeaders:
+              - "*"
+            allowCredentials: true
+            maxAge: 3600
+
+      # Default Filters
+      default-filters:
+        - DedupeResponseHeader=Access-Control-Allow-Credentials Access-Control-Allow-Origin
+        - AddResponseHeader=X-Response-Default-Foo, Default-Bar
+        - name: RequestRateLimiter
+          args:
+            redis-rate-limiter.replenishRate: 10
+            redis-rate-limiter.burstCapacity: 20
+            redis-rate-limiter.requestedTokens: 1
+
+      # Discovery Configuration
+      discovery:
+        locator:
+          enabled: false
+          lower-case-service-id: true
+
+# Management and Monitoring
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus,gateway
+  endpoint:
+    health:
+      show-details: always
+    gateway:
+      enabled: true
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+
+# Logging Configuration
+logging:
+  level:
+    org.springframework.cloud.gateway: DEBUG
+    org.springframework.cloud.gateway.route.RouteDefinitionLocator: INFO
+    reactor.netty: INFO
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+
+# Service Discovery (for future use with Kubernetes service discovery)
+eureka:
+  client:
+    enabled: false
+
+# Custom Gateway Configuration
+gateway:
+  security:
+    jwt:
+      secret: ${JWT_SECRET:treasure-hunt-jwt-secret-key-2025}
+      expiration: 86400000 # 24 hours
+    
+  rate-limiting:
+    enabled: true
+    default-requests-per-second: 10
+    default-burst-capacity: 20
+    
+  circuit-breaker:
+    enabled: true
+    failure-threshold: 5
+    timeout: 5000ms
+    
+  retry:
+    enabled: true
+    max-attempts: 3
+    backoff-delay: 1000ms
+
+# Service URLs (will be replaced with Kubernetes service discovery)
+services:
+  payment-service:
+    url: ${PAYMENT_SERVICE_URL:http://payment-service:8081}
+  auth-service:
+    url: ${AUTH_SERVICE_URL:http://auth-service:8082}
+  user-service:
+    url: ${USER_SERVICE_URL:http://user-service:8083}
+  frontend:
+    url: ${FRONTEND_URL:http://frontend:3000}

@@ -1,0 +1,103 @@
+version: "3.9"
+services:
+  # Payment Service Database
+  payment-postgres:
+    image: postgis/postgis:15-3.4
+    environment:
+      POSTGRES_DB: payment_service
+      POSTGRES_USER: payment_user
+      POSTGRES_PASSWORD: payment_pass
+    ports: ["5434:5432"]  # Different port to avoid conflict with treasure DB
+    volumes: 
+      - payment_pgdata:/var/lib/postgresql/data
+      - ./create_tables.sql:/docker-entrypoint-initdb.d/create_tables.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U payment_user -d payment_service"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Payment Service Redis (separate instance)
+  payment-redis:
+    image: redis:7.2-alpine
+    ports: ["6380:6379"]  # Different port to avoid conflict
+    command: ["redis-server","--save","","--appendonly","no"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Shared Infrastructure (can be used by both services)
+  kafka:
+    image: bitnami/kafka:3.7
+    ports: ["9092:9092"]
+    environment:
+      KAFKA_ENABLE_KRAFT: "yes"
+      KAFKA_CFG_NODE_ID: "1"
+      KAFKA_CFG_PROCESS_ROLES: "controller,broker"
+      KAFKA_CFG_CONTROLLER_QUORUM_VOTERS: "1@kafka:29093"
+      KAFKA_CFG_LISTENERS: "PLAINTEXT://:9092,CONTROLLER://:29093"
+      KAFKA_CFG_ADVERTISED_LISTENERS: "PLAINTEXT://localhost:9092"
+      KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: "CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT"
+      KAFKA_CFG_INTER_BROKER_LISTENER_NAME: "PLAINTEXT"
+      KAFKA_CFG_CONTROLLER_LISTENER_NAMES: "CONTROLLER"
+      KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE: "true"
+      ALLOW_PLAINTEXT_LISTENER: "yes"
+    volumes: [ "kafkadata:/bitnami/kafka" ]
+    healthcheck:
+      test: ["CMD-SHELL","kafka-topics.sh --bootstrap-server localhost:9092 --list > /dev/null 2>&1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    depends_on: [ zipkin ]
+
+  kafdrop:
+    image: obsidiandynamics/kafdrop:4.0.1
+    environment:
+      KAFKA_BROKERCONNECT: "kafka:9092"
+    ports: ["9000:9000"]
+    depends_on: [ kafka ]
+
+  zipkin:
+    image: openzipkin/zipkin:2.24
+    ports: ["9411:9411"]
+
+  # Payment Service Application
+  payment-service:
+    build: .
+    ports: ["8081:8081"]
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_DATASOURCE_URL: jdbc:postgresql://payment-postgres:5432/payment_service
+      SPRING_DATASOURCE_USERNAME: payment_user
+      SPRING_DATASOURCE_PASSWORD: payment_pass
+      SPRING_DATA_REDIS_HOST: payment-redis
+      SPRING_DATA_REDIS_PORT: 6379
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      SPRING_ZIPKIN_BASE_URL: http://zipkin:9411
+      RAZORPAY_KEY_ID: rzp_test_fQluXDFtJjH3vV
+      RAZORPAY_KEY_SECRET: aBO9FVztNddcnjnoosqVrmHO
+      RAZORPAY_WEBHOOK_SECRET: treasure_hunt_webhook_secret_2025
+      RAZORPAY_X_ACCOUNT_ID: acc_test_placeholder
+    depends_on:
+      payment-postgres:
+        condition: service_healthy
+      payment-redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  payment_pgdata:
+  kafkadata:
+
+networks:
+  default:
+    name: treasure-network
+    external: true

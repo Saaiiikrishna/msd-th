@@ -1,0 +1,21 @@
+apiVersion: v2
+name: payment-service
+description: A Helm chart for Payment Service microservice
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+
+dependencies: []
+
+keywords:
+  - payment
+  - microservice
+  - razorpay
+  - treasure-hunt
+
+maintainers:
+  - name: Payment Service Team
+    email: payments@treasurehunt.com
+
+sources:
+  - https://github.com/mysillydreams/treasure-hunt-payment-service

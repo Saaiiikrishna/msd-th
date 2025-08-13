@@ -1,0 +1,52 @@
+spring:
+  data:
+    jdbc:
+      repositories:
+        enabled: false
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        dialect: org.hibernate.spatial.dialect.postgis.PostgisPG10Dialect
+        default_batch_fetch_size: 50
+        jdbc:
+          use_streams_for_binary: false
+        format_sql: true
+  redis:
+    host: redis
+    port: 6379
+  kafka:
+    bootstrap-servers: kafka:9092
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+management:
+  tracing:
+    enabled: true
+    sampling:
+      probability: 1.0
+  zipkin:
+    tracing:
+      endpoint: http://zipkin:9411/api/v2/spans
+grpc:
+  server:
+    port: 9090
+
+  client:
+    notifications:
+          address: static://notifications:9090
+          negotiationType: PLAINTEXT
+    payments:
+      address: static://payments:9090
+      negotiationType: PLAINTEXT
+
+feature:
+  integrations:
+    payments:
+      enabled: false
+    notifications:
+      enabled: false
+
+
+

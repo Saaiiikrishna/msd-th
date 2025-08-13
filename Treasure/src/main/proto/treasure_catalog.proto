@@ -1,0 +1,61 @@
+syntax = "proto3";
+package treasure.catalog.v1;
+option java_multiple_files = true;
+option java_package = "com.mysillydreams.treasure.grpc.catalog.v1";
+option java_outer_classname = "TreasureCatalogProto";
+
+import "google/protobuf/empty.proto";
+import "common.proto";
+
+service TreasureCatalogService {
+  rpc ListCategories(google.protobuf.Empty) returns (ListCategoriesResponse);
+  rpc ListSubcategories(ListSubcategoriesRequest) returns (ListSubcategoriesResponse);
+
+  rpc ListPlans(ListPlansRequest) returns (ListPlansResponse);
+  rpc GetPlan(GetPlanRequest) returns (GetPlanResponse);
+}
+
+message ListCategoriesResponse {
+  repeated Category categories = 1;
+  message Category {
+    string id = 1;
+    string name = 2;
+    string description = 3;
+    string audience = 4; // "INDIVIDUAL" | "GROUP"
+  }
+}
+
+message ListSubcategoriesRequest { string category_id = 1; }
+message ListSubcategoriesResponse {
+  repeated Subcategory subcategories = 1;
+  message Subcategory {
+    string id = 1;
+    string name = 2;
+    string description = 3;
+    repeated treasure.common.v1.AgeBand age_bands = 4;
+  }
+}
+
+message ListPlansRequest {
+  string subcategory_id = 1;
+  treasure.common.v1.Difficulty difficulty = 2;
+  int32 level = 3;
+  string date_from = 4; // ISO
+  string date_to = 5;
+  treasure.common.v1.TimeWindowType time_window = 6;
+  string price_min = 7;
+  string price_max = 8;
+  string city = 9;
+  int32  within_km = 10;
+  bool   has_slots = 11;
+  int32  age = 12;
+  treasure.common.v1.Pagination page = 99;
+}
+
+message ListPlansResponse {
+  repeated treasure.common.v1.PlanSummary items = 1;
+  treasure.common.v1.PageInfo page = 2;
+}
+
+message GetPlanRequest { string plan_id = 1; }
+message GetPlanResponse { treasure.common.v1.PlanDetail plan = 1; }

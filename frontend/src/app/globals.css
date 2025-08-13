@@ -1,0 +1,361 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom CSS Variables - Updated for Neumorphic Design */
+:root {
+  --font-inter: 'Inter', system-ui, sans-serif;
+  --font-poppins: 'Poppins', system-ui, sans-serif;
+
+  /* Neumorphic colors - Light mode */
+  --neumorphic-bg: #f0f0f3;
+  --neumorphic-shadow-dark: #cbd5e1;
+  --neumorphic-shadow-light: #f8fafc;
+
+  /* Primary colors - Subtle slate */
+  --primary-50: #f8fafc;
+  --primary-500: #64748b;
+  --primary-600: #475569;
+
+  /* Accent colors */
+  --accent-500: #0ea5e9;
+  --accent-600: #0284c7;
+
+  /* Neon colors for highlights */
+  --neon-cyan: #00ffff;
+  --neon-purple: #8b5cf6;
+  --neon-pink: #ec4899;
+
+  /* Animation durations */
+  --duration-fast: 150ms;
+  --duration-normal: 300ms;
+  --duration-slow: 500ms;
+}
+
+/* Dark mode variables */
+.dark {
+  --neumorphic-bg: #2a2d3a;
+  --neumorphic-shadow-dark: #1e2028;
+  --neumorphic-shadow-light: #363a4a;
+
+  /* Adjust primary colors for dark mode */
+  --primary-50: #0f172a;
+  --primary-500: #94a3b8;
+  --primary-600: #cbd5e1;
+}
+
+/* Base styles */
+@layer base {
+  * {
+    @apply border-gray-200;
+  }
+  
+  html {
+    @apply scroll-smooth;
+  }
+  
+  body {
+    @apply bg-neutral-50 text-neutral-800 font-sans transition-colors duration-300;
+    font-feature-settings: 'rlig' 1, 'calt' 1;
+    background: var(--neumorphic-bg);
+  }
+
+  .dark body {
+    @apply bg-neutral-900 text-neutral-200;
+    background: var(--neumorphic-bg);
+  }
+  
+  /* Focus styles for accessibility */
+  *:focus {
+    @apply outline-none ring-2 ring-accent-500 ring-offset-2 ring-offset-neutral-50;
+  }
+
+  .dark *:focus {
+    @apply ring-offset-neutral-900;
+  }
+  
+  /* Headings */
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-display font-semibold tracking-tight;
+  }
+  
+  h1 {
+    @apply text-4xl md:text-5xl lg:text-6xl;
+  }
+  
+  h2 {
+    @apply text-3xl md:text-4xl lg:text-5xl;
+  }
+  
+  h3 {
+    @apply text-2xl md:text-3xl;
+  }
+  
+  h4 {
+    @apply text-xl md:text-2xl;
+  }
+  
+  h5 {
+    @apply text-lg md:text-xl;
+  }
+  
+  h6 {
+    @apply text-base md:text-lg;
+  }
+  
+  /* Links */
+  a {
+    @apply transition-colors duration-200;
+  }
+  
+  /* Selection */
+  ::selection {
+    @apply bg-accent-500 text-white;
+  }
+  
+  /* Scrollbar */
+  ::-webkit-scrollbar {
+    @apply w-2;
+  }
+  
+  ::-webkit-scrollbar-track {
+    @apply bg-neutral-100;
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    @apply bg-neutral-300 rounded-full;
+  }
+  
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-neutral-400;
+  }
+}
+
+/* Component styles */
+@layer components {
+  /* Neumorphic button base */
+  .btn-neumorphic {
+    @apply relative inline-flex items-center justify-center px-6 py-3 text-base font-medium rounded-neumorphic transition-all duration-200;
+    background: var(--neumorphic-bg);
+    box-shadow: 8px 8px 16px var(--neumorphic-shadow-dark), -8px -8px 16px var(--neumorphic-shadow-light);
+  }
+  
+  .btn-neumorphic:hover {
+    box-shadow: 12px 12px 24px var(--neumorphic-shadow-dark), -12px -12px 24px var(--neumorphic-shadow-light);
+  }
+  
+  .btn-neumorphic:active {
+    box-shadow: inset 8px 8px 16px var(--neumorphic-shadow-dark), inset -8px -8px 16px var(--neumorphic-shadow-light);
+  }
+  
+  /* Neumorphic button variants */
+  .btn-primary {
+    @apply btn-neumorphic bg-gradient-to-r from-primary-500 to-accent-500 text-white;
+    background: linear-gradient(135deg, var(--primary-500), var(--accent-500));
+  }
+
+  .btn-secondary {
+    @apply btn-neumorphic bg-secondary-500 text-neutral-800;
+  }
+
+  .btn-ghost {
+    @apply btn-neumorphic bg-transparent text-primary-600 border border-primary-200;
+  }
+
+  .btn-neon {
+    @apply btn-neumorphic bg-gradient-to-r from-neon-cyan to-neon-purple text-white;
+    background: linear-gradient(135deg, var(--neon-cyan), var(--neon-purple));
+    box-shadow: 0 0 20px rgba(0, 255, 255, 0.3);
+  }
+
+  /* Dark mode button styles */
+  .dark .btn-primary {
+    background: linear-gradient(135deg, var(--primary-500), var(--accent-500));
+    box-shadow: 8px 8px 16px var(--neumorphic-shadow-dark), -8px -8px 16px var(--neumorphic-shadow-light);
+  }
+
+  .dark .btn-secondary {
+    @apply bg-secondary-600 text-neutral-200;
+  }
+  
+  /* Neumorphic card */
+  .card-neumorphic {
+    @apply rounded-neumorphic p-6 transition-all duration-300;
+    background: var(--neumorphic-bg);
+    box-shadow: 8px 8px 16px var(--neumorphic-shadow-dark), -8px -8px 16px var(--neumorphic-shadow-light);
+  }
+  
+  .card-neumorphic:hover {
+    box-shadow: 12px 12px 24px var(--neumorphic-shadow-dark), -12px -12px 24px var(--neumorphic-shadow-light);
+  }
+  
+  /* Neumorphic input */
+  .input-neumorphic {
+    @apply w-full px-4 py-3 rounded-neumorphic border-none transition-all duration-200;
+    background: var(--neumorphic-bg);
+    box-shadow: inset 8px 8px 16px var(--neumorphic-shadow-dark), inset -8px -8px 16px var(--neumorphic-shadow-light);
+  }
+  
+  .input-neumorphic:focus {
+    @apply ring-2 ring-primary-500 ring-offset-2;
+  }
+  
+  /* Loading spinner */
+  .spinner {
+    @apply inline-block w-6 h-6 border-2 border-current border-r-transparent rounded-full animate-spin;
+  }
+  
+  /* Gradient text */
+  .text-gradient {
+    @apply bg-gradient-to-r from-primary-500 to-accent-500 bg-clip-text text-transparent;
+  }
+
+  .text-neon-gradient {
+    background: linear-gradient(135deg, var(--neon-cyan), var(--neon-purple));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  
+  /* Container */
+  .container {
+    @apply mx-auto px-4 sm:px-6 lg:px-8;
+    max-width: 1280px;
+  }
+  
+  /* Section spacing */
+  .section {
+    @apply py-16 md:py-24;
+  }
+  
+  /* Glass morphism effect */
+  .glass {
+    @apply backdrop-blur-md bg-white/10 border border-white/20;
+  }
+  
+  /* Floating animation */
+  .floating {
+    animation: floating 3s ease-in-out infinite;
+  }
+  
+  @keyframes floating {
+    0%, 100% {
+      transform: translateY(0px);
+    }
+    50% {
+      transform: translateY(-10px);
+    }
+  }
+  
+  /* Pulse animation for loading states */
+  .pulse-loading {
+    @apply animate-pulse bg-neutral-200 rounded;
+  }
+  
+  /* Custom scrollbar for specific elements */
+  .custom-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: #d1d5db #f3f4f6;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar {
+    @apply w-2;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-track {
+    @apply bg-neutral-100 rounded-full;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    @apply bg-neutral-300 rounded-full;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    @apply bg-neutral-400;
+  }
+}
+
+/* Utility classes */
+@layer utilities {
+  /* Hide scrollbar but keep functionality */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+  
+  /* Text balance for better typography */
+  .text-balance {
+    text-wrap: balance;
+  }
+  
+  /* Safe area padding for mobile devices */
+  .safe-top {
+    padding-top: env(safe-area-inset-top);
+  }
+  
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  
+  /* Aspect ratio utilities */
+  .aspect-treasure {
+    aspect-ratio: 16 / 10;
+  }
+  
+  /* Animation delays */
+  .delay-100 {
+    animation-delay: 100ms;
+  }
+  
+  .delay-200 {
+    animation-delay: 200ms;
+  }
+  
+  .delay-300 {
+    animation-delay: 300ms;
+  }
+  
+  /* Responsive text sizes */
+  .text-responsive-sm {
+    @apply text-sm md:text-base;
+  }
+  
+  .text-responsive-base {
+    @apply text-base md:text-lg;
+  }
+  
+  .text-responsive-lg {
+    @apply text-lg md:text-xl;
+  }
+  
+  .text-responsive-xl {
+    @apply text-xl md:text-2xl;
+  }
+}
+
+/* Print styles */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  
+  .print-only {
+    display: block !important;
+  }
+}
+
+/* Reduced motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

@@ -1,0 +1,112 @@
+# Default values for payment-service
+replicaCount: 1
+
+image:
+  repository: payment-service
+  pullPolicy: IfNotPresent
+  tag: "latest"
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+podAnnotations: {}
+
+podSecurityContext: {}
+
+securityContext: {}
+
+service:
+  type: ClusterIP
+  port: 8081
+  targetPort: 8081
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts:
+    - host: payment-service.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+resources:
+  limits:
+    cpu: 1000m
+    memory: 1Gi
+  requests:
+    cpu: 500m
+    memory: 512Mi
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 80
+  targetMemoryUtilizationPercentage: 80
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+# Application specific configuration
+app:
+  name: payment-service
+  version: "1.0.0"
+  environment: production
+
+# Database configuration
+database:
+  host: payment-postgres
+  port: 5432
+  name: payment_service
+  username: payment_user
+  password: payment_pass
+
+# Redis configuration
+redis:
+  host: redis
+  port: 6379
+
+# Kafka configuration
+kafka:
+  bootstrapServers: kafka:9092
+  groupId: payment-service-group
+
+# Razorpay configuration
+razorpay:
+  keyId: "rzp_test_fQluXDFtJjH3vV"
+  keySecret: "aBO9FVztNddcnjnoosqVrmHO"
+  webhookSecret: "treasure_hunt_webhook_secret_2025"
+  accountId: "acc_test_placeholder"
+
+# Commission configuration
+commission:
+  percent: 2.5
+
+# Health check configuration
+healthCheck:
+  enabled: true
+  path: /actuator/health
+  initialDelaySeconds: 60
+  periodSeconds: 30
+  timeoutSeconds: 10
+  failureThreshold: 3
+
+# Monitoring
+monitoring:
+  enabled: true
+  path: /actuator/prometheus
+
+# Zipkin tracing
+zipkin:
+  baseUrl: http://zipkin:9411

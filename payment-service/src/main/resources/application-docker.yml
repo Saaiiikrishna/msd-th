@@ -1,0 +1,93 @@
+spring:
+  application:
+    name: payment-service
+  datasource:
+    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5433}/${POSTGRES_DB:payment_service}
+    username: ${POSTGRES_USER:payment_user}
+    password: ${POSTGRES_PASSWORD:payment_pass}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+  flyway:
+    enabled: false
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+    consumer:
+      group-id: payment-service-group
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+  zipkin:
+    base-url: ${ZIPKIN_BASE_URL:http://localhost:9411}
+
+server:
+  port: 8081
+
+# Payment Configuration
+payment:
+  razorpay:
+    key-id: ${RAZORPAY_KEY_ID:rzp_test_fQluXDFtJjH3vV}
+    key-secret: ${RAZORPAY_KEY_SECRET:aBO9FVztNddcnjnoosqVrmHO}
+    webhook:
+      secret: ${RAZORPAY_WEBHOOK_SECRET:treasure_hunt_webhook_secret_2025}
+      endpoint: ${RAZORPAY_WEBHOOK_ENDPOINT:http://localhost:8081/api/payments/v1/webhooks/razorpay}
+    payout:
+      account-id: ${RAZORPAY_X_ACCOUNT_ID:acc_test_placeholder}
+  commission:
+    percent: ${COMMISSION_PERCENT:2.5}
+  outbox:
+    poll:
+      delay: ${PAYMENT_OUTBOX_POLL_DELAY:5000}
+      initialDelay: ${PAYMENT_OUTBOX_POLL_INITIALDELAY:10000}
+
+# Commission configuration for the application
+app:
+  commission:
+    percent: ${COMMISSION_PERCENT:2.5}
+
+# Kafka Topics
+kafka:
+  topics:
+    paymentRequested: payment.requested
+    paymentSucceeded: payment.succeeded
+    paymentFailed: payment.failed
+    vendorPayoutInitiated: vendor.payout.initiated
+    vendorPayoutSucceeded: vendor.payout.succeeded
+    vendorPayoutFailed: vendor.payout.failed
+
+# Actuator endpoints for health checks
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: always
+
+# Swagger UI configuration
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: true
+
+logging:
+  level:
+    root: INFO
+    com.mysillydreams.payment: DEBUG
+    org.springframework.web: INFO
+    org.springframework.kafka: INFO

@@ -1,0 +1,16 @@
+syntax = "proto3";
+package notifications.v1;
+option java_multiple_files = true;
+option java_package = "com.mysillydreams.notifications.v1";
+
+message SendRequest {
+  string user_id = 1;
+  string channel = 2;    // EMAIL|SMS|PUSH|INAPP
+  string template = 3;   // e.g., "enrollment_confirmation"
+  map<string,string> data = 4; // merge vars
+}
+message SendResponse { string message_id = 1; }
+
+service NotificationService {
+  rpc Send(SendRequest) returns (SendResponse);
+}
