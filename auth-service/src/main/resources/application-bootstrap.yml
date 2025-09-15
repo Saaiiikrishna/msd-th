@@ -1,0 +1,109 @@
+server:
+  port: 8082
+
+spring:
+  application:
+    name: auth-service
+
+  # Disable OAuth2 client configuration for bootstrap mode
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.security.oauth2.client.servlet.OAuth2ClientAutoConfiguration
+      - org.springframework.boot.autoconfigure.security.oauth2.resource.servlet.OAuth2ResourceServerAutoConfiguration
+
+  # Security Configuration - Minimal for bootstrap
+  security:
+    oauth2:
+      # Disable client configuration during bootstrap
+      client:
+        registration: {}
+        provider: {}
+      # Disable resource server during bootstrap  
+      resourceserver: {}
+  
+  # Redis Configuration for Caching
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      database: 1
+      timeout: 2000ms
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 0
+
+  # Cache Configuration
+  cache:
+    type: redis
+    redis:
+      time-to-live: 300s
+      cache-null-values: false
+
+# Keycloak Configuration - Basic for bootstrap
+keycloak:
+  realm: ${KEYCLOAK_REALM:treasure-hunt}
+  auth-server-url: ${KEYCLOAK_AUTH_SERVER_URL:http://localhost:8080}
+  resource: ${KEYCLOAK_CLIENT_ID:auth-service}
+  credentials:
+    secret: ${KEYCLOAK_CLIENT_SECRET:your-client-secret}
+  use-resource-role-mappings: true
+  bearer-only: true
+
+  # Admin client configuration for user management
+  admin:
+    username: ${KEYCLOAK_ADMIN_USERNAME:admin}
+    password: ${KEYCLOAK_ADMIN_PASSWORD:admin}
+    client-id: ${KEYCLOAK_ADMIN_CLIENT_ID:admin-cli}
+
+# Auth Service Configuration
+auth:
+  user-service:
+    base-url: ${USER_SERVICE_URL:http://localhost:8083}
+    create-profile-endpoint: /api/v1/users
+    timeout: 10s
+    internal-api-key: ${USER_SERVICE_INTERNAL_API_KEY:auth-service-internal-key-12345}
+    max-retries: 3
+    retry-delay: 1s
+
+# Application Configuration
+app:
+  # WebClient Configuration
+  webclient:
+    connection-timeout: ${WEBCLIENT_CONNECTION_TIMEOUT:5000}
+    read-timeout: ${WEBCLIENT_READ_TIMEOUT:10000}
+    write-timeout: ${WEBCLIENT_WRITE_TIMEOUT:10000}
+    max-memory-size: ${WEBCLIENT_MAX_MEMORY_SIZE:1048576} # 1MB
+
+# Management and Monitoring
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: always
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+
+# Logging Configuration
+logging:
+  level:
+    com.mysillydreams.authservice: DEBUG
+    org.springframework.security: INFO
+    org.hibernate.SQL: INFO
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+
+# OpenAPI Documentation
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operationsSorter: method

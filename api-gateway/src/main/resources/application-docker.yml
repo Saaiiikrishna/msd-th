@@ -1,0 +1,101 @@
+spring:
+  # Redis Configuration for Docker
+  data:
+    redis:
+      host: ${REDIS_HOST:redis}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      database: 0
+      timeout: 2000ms
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 0
+
+  # Cache Configuration for Session Introspection
+  cache:
+    type: redis
+    redis:
+      time-to-live: 30s
+      cache-null-values: false
+
+# Management Configuration
+management:
+  health:
+    redis:
+      enabled: true
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus,gateway
+  endpoint:
+    health:
+      show-details: when-authorized
+
+  # Cloud Gateway Configuration for Docker
+  cloud:
+    gateway:
+      # Global CORS Configuration
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowedOriginPatterns:
+              - "http://localhost:3000"              # Local development
+              - "https://*.mysillydreams.com"        # Staging environments
+              - "https://*.vercel.app"               # Vercel deployments
+            allowedMethods: [GET, POST, PUT, DELETE, OPTIONS]
+            allowedHeaders: ["*"]
+            exposedHeaders: ["*"]
+            allowCredentials: true
+            maxAge: 3600
+
+      # Default Filters
+      default-filters:
+        - DedupeResponseHeader=Access-Control-Allow-Credentials Access-Control-Allow-Origin RETAIN_FIRST
+        - AddRequestHeader=X-Gateway, treasure-hunt-gateway
+
+      # Route Configuration for Docker environment
+      routes:
+        # ---------- Auth Service ----------
+        - id: auth-service
+          uri: http://auth-service:8081
+          predicates:
+            - Path=/api/auth/**
+          filters:
+            - StripPrefix=0
+
+        # ---------- User Service ----------
+        - id: user-service
+          uri: http://user-service:8082
+          predicates:
+            - Path=/api/user/**
+          filters:
+            - StripPrefix=0
+
+        # ---------- Keycloak OIDC ----------
+        - id: keycloak
+          uri: http://keycloak:8080
+          predicates:
+            - Path=/realms/**, /resources/**
+          filters:
+            - StripPrefix=0
+
+# Service URLs for Docker environment
+services:
+  auth-service:
+    url: http://auth-service:8081
+  user-service:
+    url: http://user-service:8082
+  keycloak:
+    url: http://keycloak:8080
+  frontend:
+    url: http://frontend:3000
+
+# Logging Configuration
+logging:
+  level:
+    org.springframework.cloud.gateway: DEBUG
+    org.springframework.security: DEBUG
+    com.mysillydreams.gateway: DEBUG
+    org.springframework.data.redis: DEBUG

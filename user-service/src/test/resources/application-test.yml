@@ -1,0 +1,243 @@
+# Test configuration for User Service
+spring:
+  profiles:
+    active: test
+  
+  # In-memory H2 database for testing
+  datasource:
+    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: 
+    
+  # JPA configuration for testing
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: true
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+        format_sql: true
+        use_sql_comments: true
+    defer-datasource-initialization: true
+    
+  # H2 Console for debugging (only in test)
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+      
+  # Disable Redis for testing
+  data:
+    redis:
+      repositories:
+        enabled: false
+  cache:
+    type: simple
+    
+  # Test mail configuration
+  mail:
+    host: localhost
+    port: 25
+    username: test
+    password: test
+    properties:
+      mail:
+        smtp:
+          auth: false
+          starttls:
+            enable: false
+            
+  # Disable Kafka for testing
+  kafka:
+    bootstrap-servers: localhost:9092
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+    consumer:
+      group-id: user-service-test
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+
+# Logging configuration for tests
+logging:
+  level:
+    com.mysillydreams.userservice: DEBUG
+    org.springframework.security: DEBUG
+    org.springframework.web: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+  pattern:
+    console: "%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+
+# Security configuration for tests
+security:
+  jwt:
+    secret: test-secret-key-for-testing-purposes-only
+    expiration: 3600000
+  encryption:
+    key: test-encryption-key-32-characters
+    algorithm: AES/GCM/NoPadding
+
+# Application configuration for tests
+app:
+  name: user-service-test
+  version: 1.0.0-TEST
+  
+  # PII encryption settings for tests
+  pii:
+    encryption:
+      enabled: true
+      key: test-pii-encryption-key-32-chars
+      algorithm: AES/GCM/NoPadding
+    hmac:
+      enabled: true
+      key: test-hmac-key-for-testing-only
+      algorithm: HmacSHA256
+      
+  # Rate limiting disabled for tests
+  rate-limiting:
+    enabled: false
+    
+  # CORS configuration for tests
+  cors:
+    allowed-origins: "*"
+    allowed-methods: "*"
+    allowed-headers: "*"
+    
+  # Audit configuration for tests
+  audit:
+    enabled: true
+    retention-days: 30
+    
+  # Event publishing for tests
+  events:
+    enabled: true
+    async: false
+    
+# Management endpoints for testing
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: always
+  health:
+    db:
+      enabled: true
+    redis:
+      enabled: false
+      
+# Test-specific feature flags
+features:
+  user-registration: true
+  email-verification: false
+  phone-verification: false
+  two-factor-auth: false
+  gdpr-compliance: true
+  audit-logging: true
+  rate-limiting: false
+  
+# Test data configuration
+test:
+  data:
+    cleanup: true
+    seed: false
+  performance:
+    enabled: false
+  security:
+    csrf-disabled: true
+    
+# Validation configuration
+validation:
+  email:
+    pattern: "^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$"
+  phone:
+    pattern: "^[+]?[0-9\\s\\-\\(\\)]{7,15}$"
+  reference-id:
+    pattern: "^USR[0-9]{8,12}$"
+    
+# Pagination defaults for tests
+pagination:
+  default-page-size: 20
+  max-page-size: 100
+  
+# Cache configuration for tests
+cache:
+  user-lookup:
+    ttl: 300
+    max-size: 1000
+  user-profile:
+    ttl: 600
+    max-size: 500
+  role-hierarchy:
+    ttl: 3600
+    max-size: 100
+    
+# Mock external services for tests
+external-services:
+  notification-service:
+    enabled: false
+    url: http://localhost:8081
+  payment-service:
+    enabled: false
+    url: http://localhost:8082
+  treasure-service:
+    enabled: false
+    url: http://localhost:8083
+    
+# Test profiles
+---
+spring:
+  config:
+    activate:
+      on-profile: integration-test
+      
+# Additional configuration for integration tests
+test:
+  containers:
+    postgres:
+      enabled: false
+    redis:
+      enabled: false
+    kafka:
+      enabled: false
+      
+---
+spring:
+  config:
+    activate:
+      on-profile: performance-test
+      
+# Performance test configuration
+test:
+  performance:
+    enabled: true
+    concurrent-users: 10
+    test-duration: 60
+    ramp-up-time: 10
+    
+logging:
+  level:
+    com.mysillydreams.userservice: INFO
+    org.hibernate.SQL: WARN
+    
+---
+spring:
+  config:
+    activate:
+      on-profile: security-test
+      
+# Security test configuration
+security:
+  test:
+    enabled: true
+    csrf-protection: true
+    
+test:
+  security:
+    csrf-disabled: false
+    authentication-required: true

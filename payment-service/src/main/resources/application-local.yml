@@ -1,0 +1,43 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5433/payment_service
+    username: payment_user
+    password: payment_pass
+    driver-class-name: org.postgresql.Driver
+
+  # Kafka configuration
+  kafka:
+    bootstrap-servers: localhost:9092
+    consumer:
+      group-id: payment-service-group
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: "*"
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+
+# Flyway configuration for local environment
+flyway:
+  enabled: true
+  baseline-on-migrate: true
+  baseline-version: 0
+  baseline-description: "Initial baseline"
+
+# Override server port to match expected port 8081 from task description
+server:
+  port: 8081
+
+logging:
+  level:
+    root: INFO
+    com.mysillydreams.payment: DEBUG
+    org.springframework.kafka: INFO
+    com.razorpay: INFO
+
+# Application-specific configuration
+app:
+  commission:
+    percent: 10.0  # 10% commission for vendor payouts

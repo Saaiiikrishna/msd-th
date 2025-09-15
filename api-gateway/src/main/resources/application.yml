@@ -1,0 +1,202 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: api-gateway
+
+  # Cloud Gateway Configuration - Production Ready
+  cloud:
+    gateway:
+      # Global CORS Configuration - Fixed for localhost development
+      globalcors:
+        corsConfigurations:
+          '[/**]':
+            allowedOrigins:
+              - "http://localhost:3000"              # Local development - exact origin
+            allowedMethods: [GET, POST, PUT, DELETE, OPTIONS]
+            allowedHeaders: ["*"]
+            exposedHeaders: ["*"]
+            allowCredentials: true
+            maxAge: 3600
+
+      # Default Filters - Production Ready
+      default-filters:
+        - AddRequestHeader=X-Correlation-Id, "#{T(java.util.UUID).randomUUID()}"
+        - PreserveHostHeader
+        - RemoveRequestHeader=Cookie # Optional for non-browser calls
+        # Strip any CORS headers coming back from downstream services (Auth/Keycloak/etc)
+        - RemoveResponseHeader=Access-Control-Allow-Origin
+        - RemoveResponseHeader=Access-Control-Allow-Credentials
+        # Keep existing deduplication as safety belt
+        - DedupeResponseHeader=Access-Control-Allow-Credentials Access-Control-Allow-Origin RETAIN_FIRST
+
+      # Discovery Configuration
+      discovery:
+        locator:
+          enabled: false
+          lower-case-service-id: true
+
+      # HTTP Client Configuration - Production Tuned
+      httpclient:
+        connect-timeout: 3000
+        response-timeout: 8s
+        pool:
+          type: elastic
+          max-idle-time: 15s
+          max-life-time: 60s
+
+      # Route Configuration - Simplified for initial setup
+      routes:
+        # ---------- Auth Service ----------
+        - id: auth-service
+          uri: ${services.auth-service.url}
+          predicates:
+            - Path=/api/auth/**
+
+        # ---------- User Service ----------
+        - id: user-service
+          uri: ${services.user-service.url}
+          predicates:
+            - Path=/api/user-service/**
+
+        # ---------- Treasure Service ----------
+        - id: treasure-service
+          uri: http://treasure-service:8082
+          predicates:
+            - Path=/api/treasure/**
+
+        # ---------- Payment Service ----------
+        - id: payment-service
+          uri: http://payment-service:8081
+          predicates:
+            - Path=/api/payments/**
+
+        # ---------- Keycloak OIDC (optional proxy) ----------
+        - id: keycloak
+          uri: ${services.keycloak.url}
+          predicates:
+            - Path=/realms/**, /resources/**
+
+  # Security Configuration - OAuth2 Resource Server
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          jwk-set-uri: ${KEYCLOAK_JWK_SET_URI:http://keycloak:8080/realms/treasure-hunt/protocol/openid-connect/certs}
+
+  # Redis Configuration for Rate Limiting and Caching
+  data:
+    redis:
+      host: ${REDIS_HOST:redis}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      database: 0
+      timeout: 2000ms
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 0
+
+  # Cache Configuration for Session Introspection
+  cache:
+    type: redis
+    redis:
+      time-to-live: 30s
+      cache-null-values: false
+
+# Management and Monitoring
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus,gateway
+  endpoint:
+    health:
+      show-details: when-authorized
+    gateway:
+      enabled: true
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+
+# Logging Configuration
+logging:
+  level:
+    org.springframework.cloud.gateway: INFO
+    org.springframework.security: INFO
+    com.mysillydreams.gateway: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level [%X{correlationId}] %logger{36} - %msg%n"
+
+# Rate Limiting Configuration
+rate-limiting:
+  general:
+    replenish-rate: 40
+    burst-capacity: 80
+  enrollment:
+    replenish-rate: 10
+    burst-capacity: 20
+  payment:
+    replenish-rate: 20
+    burst-capacity: 40
+  admin:
+    replenish-rate: 100
+    burst-capacity: 200
+  user:
+    replenish-rate: 20
+    burst-capacity: 40
+
+# Circuit Breaker Configuration
+resilience4j:
+  circuitbreaker:
+    configs:
+      default:
+        sliding-window-size: 10
+        permitted-number-of-calls-in-half-open-state: 3
+        automatic-transition-from-open-to-half-open-enabled: true
+        wait-duration-in-open-state: 5s
+        failure-rate-threshold: 50
+        minimum-number-of-calls: 5
+
+  timelimiter:
+    configs:
+      default:
+        timeout-duration: 10s
+    instances:
+      auth-service-cb:
+        timeout-duration: 5s
+      user-service-cb:
+        timeout-duration: 8s
+      treasure-service-cb:
+        timeout-duration: 10s
+      payment-service-cb:
+        timeout-duration: 15s
+
+# Service URLs (will be replaced with Kubernetes service discovery)
+services:
+  auth-service:
+    url: ${AUTH_SERVICE_URL:http://auth-service:8081}
+  user-service:
+    url: ${USER_SERVICE_URL:http://user-service:8083}
+  treasure-service:
+    url: ${TREASURE_SERVICE_URL:http://treasure-service:8082}
+  payment-service:
+    url: ${PAYMENT_SERVICE_URL:http://payment-service:8081}
+  keycloak:
+    url: ${KEYCLOAK_URL:http://keycloak:8080}
+  frontend:
+    url: ${FRONTEND_URL:http://frontend:3000}
+
+# Fallback URIs
+fallback:
+  auth:
+    uri: forward:/fallback/auth
+  user:
+    uri: forward:/fallback/user
+  treasure:
+    uri: forward:/fallback/treasure
+  payment:
+    uri: forward:/fallback/payment

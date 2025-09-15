@@ -1,0 +1,128 @@
+syntax = "proto3";
+package treasure.common.v1;
+option java_multiple_files = true;
+option java_package = "com.mysillydreams.treasure.grpc.common.v1";
+option java_outer_classname = "CommonProto";
+
+message UUID { string value = 1; }
+
+message Money {
+  string currency = 1; // "INR","USD","EUR"
+  string amount   = 2; // decimal as string
+}
+
+message PriceComponent {
+  string type  = 1; // GST|VAT|CONVENIENCE_FEE|PLATFORM_FEE|TAX
+  string calc  = 2; // PCT|FLAT
+  string value = 3; // decimal as string
+  bool   enforced = 4;
+}
+
+message PricingPreview {
+  Money base = 1;
+  repeated PriceComponent components = 2;
+  Money total = 3;
+}
+
+enum Difficulty {
+  DIFF_UNSPECIFIED = 0;
+  BEGINNER = 1;
+  INTERMEDIATE = 2;
+  ADVANCED = 3;
+}
+
+enum TimeWindowType {
+  TWT_UNSPECIFIED = 0;
+  DAY = 1;
+  NIGHT = 2;
+  FULL_DAY = 3;
+  MULTI_DAY = 4;
+}
+
+enum EnrollmentMode {
+  MODE_UNSPECIFIED = 0;
+  PAY_TO_ENROLL = 1;
+  APPROVAL_REQUIRED = 2;
+}
+
+enum EnrollmentType {
+  TYPE_UNSPECIFIED = 0;
+  INDIVIDUAL = 1;
+  TEAM = 2;
+}
+
+enum EnrollmentStatus {
+  ENR_STATUS_UNSPECIFIED = 0;
+  PENDING = 1;
+  CONFIRMED = 2;
+  REJECTED = 3;
+  CANCELLED = 4;
+}
+
+enum PaymentStatus {
+  PAY_STATUS_UNSPECIFIED = 0;
+  NONE = 1;
+  AWAITING = 2;
+  PAID = 3;
+  REFUNDED = 4;
+}
+
+message Pagination {
+  int32 page = 1;
+  int32 size = 2;
+}
+
+message PageInfo {
+  int64 total_elements = 1;
+  int32 total_pages = 2;
+  int32 page = 3;
+  int32 size = 4;
+}
+
+message AgeBand {
+  string label = 1;
+  int32 min_age = 2;
+  int32 max_age = 3;
+}
+
+message PlanSummary {
+  string id = 1;
+  string title = 2;
+  string subcategory_name = 3;
+  string city = 4;
+  bool   is_virtual = 5;
+  TimeWindowType time_window = 6;
+  string start_at = 7; // ISO-8601
+  string end_at = 8;
+  string difficulty_range = 9; // e.g., "BEGINNER L1..L5"
+  Money  price_from = 10;
+  bool   has_finite_slots = 11;
+  int32  available_view = 12;
+}
+
+message PlanDetail {
+  string id = 1;
+  string title = 2;
+  string summary = 3;
+  string venue_text = 4;
+  string city = 5;
+  string country = 6;
+  bool   is_virtual = 7;
+  TimeWindowType time_window = 8;
+  string start_at = 9;
+  string end_at = 10;
+  repeated Rule rules = 11;
+  repeated Task tasks = 12;
+  Slot slot = 13;
+  PricingPreview pricing_preview = 14;
+
+  message Rule { string text = 1; int32 order = 2; }
+  message Task { string id = 1; string title = 2; string details = 3; bool crucial = 4; }
+  message Slot { int32 capacity = 1; int32 reserved = 2; int32 available_view = 3; } // capacity -1 => open
+}
+
+message UserLevelSummary {
+  int32 beginner = 1;
+  int32 intermediate = 2;
+  int32 advanced = 3;
+}

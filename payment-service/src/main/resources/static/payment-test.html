@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Treasure Hunt Payment Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 30px;
+        }
+        .payment-section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .btn {
+            background: #3498db;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+        }
+        .btn:hover {
+            background: #2980b9;
+        }
+        .btn-success {
+            background: #27ae60;
+        }
+        .btn-success:hover {
+            background: #229954;
+        }
+        .test-data {
+            background: #ecf0f1;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+            font-family: monospace;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .invoice-details {
+            background: #e8f4fd;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+        }
+    </style>
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏴‍☠️ Treasure Hunt Payment Test</h1>
+            <p>Test payment integration with Razorpay</p>
+        </div>
+
+        <!-- Step 1: Create Payment -->
+        <div class="payment-section">
+            <h3>Step 1: Create Payment Order</h3>
+            <button class="btn" onclick="createPayment()">Create Payment Order</button>
+            <div id="paymentStatus"></div>
+            <div id="invoiceDetails"></div>
+        </div>
+
+        <!-- Step 2: Test Payment Methods -->
+        <div class="payment-section">
+            <h3>Step 2: Test Payment Methods</h3>
+            <div id="paymentButtons" style="display: none;">
+                <button class="btn btn-success" onclick="payWithCard()">💳 Pay with Test Card</button>
+                <button class="btn btn-success" onclick="payWithUPI()">📱 Pay with Test UPI</button>
+                <button class="btn btn-success" onclick="payWithWallet()">👛 Pay with Wallet</button>
+                <button class="btn btn-success" onclick="payWithNetBanking()">🏦 Pay with Net Banking</button>
+            </div>
+        </div>
+
+        <!-- Test Data Reference -->
+        <div class="payment-section">
+            <h3>📋 Test Data Reference</h3>
+            <div class="test-data">
+                <strong>Test Cards:</strong><br>
+                • Success: 4111 1111 1111 1111 (CVV: 123, Expiry: 12/25)<br>
+                • Failure: 4000 0000 0000 0002<br><br>
+                <strong>Test UPI:</strong><br>
+                • Success: success@razorpay<br>
+                • Failure: failure@razorpay<br><br>
+                <strong>Test Amount:</strong> ₹546 (₹450 + ₹81 tax + ₹15 fees - ₹50 discount)
+            </div>
+        </div>
+
+        <!-- Payment Status -->
+        <div class="payment-section">
+            <h3>Payment Status</h3>
+            <div id="finalStatus"></div>
+            <button class="btn" onclick="checkPaymentStatus()" id="statusBtn" style="display: none;">Check Payment Status</button>
+        </div>
+    </div>
+
+    <script>
+        let currentOrderId = null;
+        let currentTransactionId = null;
+
+        async function createPayment() {
+            const statusDiv = document.getElementById('paymentStatus');
+            statusDiv.innerHTML = '<div class="status">Creating payment order...</div>';
+
+            try {
+                const response = await fetch('/api/payments/v1/treasure/process-enrollment', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        enrollmentId: "550e8400-e29b-41d4-a716-446655440004",
+                        registrationId: "TH-2508-IND-000004",
+                        userId: "550e8400-e29b-41d4-a716-446655440005",
+                        planId: "550e8400-e29b-41d4-a716-446655440006",
+                        planTitle: "Premium Treasure Hunt Experience",
+                        enrollmentType: "INDIVIDUAL",
+                        teamName: "Solo Explorer",
+                        teamSize: 1,
+                        baseAmount: 450,
+                        discountAmount: 50,
+                        taxAmount: 81,
+                        convenienceFee: 10,
+                        platformFee: 5,
+                        totalAmount: 546,
+                        currency: "INR",
+                        promoCode: "WELCOME10",
+                        promotionName: "Welcome Discount",
+                        billingName: "Test User",
+                        billingEmail: "test@example.com",
+                        billingPhone: "+91-9876543210",
+                        billingAddress: "123 Test Street, Mumbai, Maharashtra, India"
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    currentOrderId = data.razorpayOrderId;
+                    currentTransactionId = data.transaction.id;
+                    
+                    statusDiv.innerHTML = '<div class="status success">✅ Payment order created successfully!</div>';
+                    
+                    document.getElementById('invoiceDetails').innerHTML = `
+                        <div class="invoice-details">
+                            <h4>Invoice Details</h4>
+                            <p><strong>Invoice:</strong> ${data.invoice.invoiceNumber}</p>
+                            <p><strong>Amount:</strong> ₹${data.invoice.totalAmount}</p>
+                            <p><strong>Razorpay Order:</strong> ${data.razorpayOrderId}</p>
+                            <p><strong>Status:</strong> ${data.invoice.paymentStatus}</p>
+                        </div>
+                    `;
+                    
+                    document.getElementById('paymentButtons').style.display = 'block';
+                    document.getElementById('statusBtn').style.display = 'inline-block';
+                } else {
+                    statusDiv.innerHTML = `<div class="status error">❌ Error: ${data.errorMessage}</div>`;
+                }
+            } catch (error) {
+                statusDiv.innerHTML = `<div class="status error">❌ Network Error: ${error.message}</div>`;
+            }
+        }
+
+        function payWithCard() {
+            if (!currentOrderId) {
+                alert('Please create a payment order first');
+                return;
+            }
+
+            const options = {
+                key: 'rzp_test_fQluXDFtJjH3vV',
+                amount: 54600, // Amount in paise
+                currency: 'INR',
+                name: 'Treasure Hunt',
+                description: 'Premium Treasure Hunt Experience',
+                order_id: currentOrderId,
+                handler: function(response) {
+                    handlePaymentSuccess(response);
+                },
+                prefill: {
+                    name: 'Test User',
+                    email: 'test@example.com',
+                    contact: '+919876543210'
+                },
+                theme: {
+                    color: '#3498db'
+                },
+                method: {
+                    card: true,
+                    netbanking: false,
+                    wallet: false,
+                    upi: false
+                }
+            };
+
+            const rzp = new Razorpay(options);
+            rzp.open();
+        }
+
+        function payWithUPI() {
+            if (!currentOrderId) {
+                alert('Please create a payment order first');
+                return;
+            }
+
+            const options = {
+                key: 'rzp_test_fQluXDFtJjH3vV',
+                amount: 54600,
+                currency: 'INR',
+                name: 'Treasure Hunt',
+                description: 'Premium Treasure Hunt Experience',
+                order_id: currentOrderId,
+                handler: function(response) {
+                    handlePaymentSuccess(response);
+                },
+                prefill: {
+                    name: 'Test User',
+                    email: 'test@example.com',
+                    contact: '+919876543210'
+                },
+                theme: {
+                    color: '#3498db'
+                },
+                method: {
+                    card: false,
+                    netbanking: false,
+                    wallet: false,
+                    upi: true
+                }
+            };
+
+            const rzp = new Razorpay(options);
+            rzp.open();
+        }
+
+        function payWithWallet() {
+            if (!currentOrderId) {
+                alert('Please create a payment order first');
+                return;
+            }
+
+            const options = {
+                key: 'rzp_test_fQluXDFtJjH3vV',
+                amount: 54600,
+                currency: 'INR',
+                name: 'Treasure Hunt',
+                description: 'Premium Treasure Hunt Experience',
+                order_id: currentOrderId,
+                handler: function(response) {
+                    handlePaymentSuccess(response);
+                },
+                prefill: {
+                    name: 'Test User',
+                    email: 'test@example.com',
+                    contact: '+919876543210'
+                },
+                theme: {
+                    color: '#3498db'
+                },
+                method: {
+                    card: false,
+                    netbanking: false,
+                    wallet: true,
+                    upi: false
+                }
+            };
+
+            const rzp = new Razorpay(options);
+            rzp.open();
+        }
+
+        function payWithNetBanking() {
+            if (!currentOrderId) {
+                alert('Please create a payment order first');
+                return;
+            }
+
+            const options = {
+                key: 'rzp_test_fQluXDFtJjH3vV',
+                amount: 54600,
+                currency: 'INR',
+                name: 'Treasure Hunt',
+                description: 'Premium Treasure Hunt Experience',
+                order_id: currentOrderId,
+                handler: function(response) {
+                    handlePaymentSuccess(response);
+                },
+                prefill: {
+                    name: 'Test User',
+                    email: 'test@example.com',
+                    contact: '+919876543210'
+                },
+                theme: {
+                    color: '#3498db'
+                },
+                method: {
+                    card: false,
+                    netbanking: true,
+                    wallet: false,
+                    upi: false
+                }
+            };
+
+            const rzp = new Razorpay(options);
+            rzp.open();
+        }
+
+        function handlePaymentSuccess(response) {
+            const finalStatus = document.getElementById('finalStatus');
+            finalStatus.innerHTML = `
+                <div class="status success">
+                    <h4>🎉 Payment Successful!</h4>
+                    <p><strong>Payment ID:</strong> ${response.razorpay_payment_id}</p>
+                    <p><strong>Order ID:</strong> ${response.razorpay_order_id}</p>
+                    <p><strong>Signature:</strong> ${response.razorpay_signature}</p>
+                </div>
+            `;
+            
+            // Call webhook to update payment status
+            updatePaymentStatus(response);
+        }
+
+        async function updatePaymentStatus(response) {
+            try {
+                const webhookResponse = await fetch('/api/payments/v1/treasure/webhook/payment-success', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        razorpay_payment_id: response.razorpay_payment_id,
+                        razorpay_order_id: response.razorpay_order_id,
+                        razorpay_signature: response.razorpay_signature
+                    })
+                });
+
+                if (webhookResponse.ok) {
+                    console.log('Payment status updated successfully');
+                }
+            } catch (error) {
+                console.error('Error updating payment status:', error);
+            }
+        }
+
+        async function checkPaymentStatus() {
+            if (!currentTransactionId) {
+                alert('No transaction to check');
+                return;
+            }
+
+            try {
+                // This would typically call a status check endpoint
+                const finalStatus = document.getElementById('finalStatus');
+                finalStatus.innerHTML = '<div class="status">Checking payment status...</div>';
+                
+                // Simulate status check
+                setTimeout(() => {
+                    finalStatus.innerHTML = `
+                        <div class="status success">
+                            <h4>Payment Status: PENDING</h4>
+                            <p>Transaction ID: ${currentTransactionId}</p>
+                            <p>Order ID: ${currentOrderId}</p>
+                        </div>
+                    `;
+                }, 1000);
+            } catch (error) {
+                console.error('Error checking payment status:', error);
+            }
+        }
+    </script>
+</body>
+</html>

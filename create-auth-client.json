@@ -1,0 +1,13 @@
+{
+  "clientId": "auth-service",
+  "name": "Auth Service Backend Client",
+  "description": "Backend service client for password grant authentication",
+  "enabled": true,
+  "publicClient": false,
+  "standardFlowEnabled": true,
+  "directAccessGrantsEnabled": true,
+  "implicitFlowEnabled": false,
+  "serviceAccountsEnabled": true,
+  "secret": "your-client-secret",
+  "protocolMappers": []
+}

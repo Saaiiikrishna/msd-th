@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: msd-treasure-hunt
+  labels:
+    name: msd-treasure-hunt
+    app: treasure-hunt
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: msd-infrastructure
+  labels:
+    name: msd-infrastructure
+    app: treasure-hunt-infra

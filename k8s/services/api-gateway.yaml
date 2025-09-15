@@ -1,0 +1,110 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: api-gateway-config
+  namespace: msd-treasure-hunt
+data:
+  SERVER_PORT: "8080"
+  AUTH_SERVICE_URL: "http://auth-service.msd-treasure-hunt.svc.cluster.local:8081"
+  USER_SERVICE_URL: "http://user-service.msd-treasure-hunt.svc.cluster.local:8082"
+  PAYMENT_SERVICE_URL: "http://payment-service.msd-treasure-hunt.svc.cluster.local:8083"
+  TREASURE_SERVICE_URL: "http://treasure-service.msd-treasure-hunt.svc.cluster.local:8084"
+  REDIS_URL: "redis://redis.msd-infrastructure.svc.cluster.local:6379"
+  LOG_LEVEL: "INFO"
+  ENVIRONMENT: "kubernetes"
+  CORS_ORIGINS: "http://localhost:3000,http://frontend.msd-treasure-hunt.svc.cluster.local:3000"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: api-gateway-secret
+  namespace: msd-treasure-hunt
+type: Opaque
+data:
+  JWT_SECRET: and0LXNlY3JldC1rZXktZm9yLWFwaS1nYXRld2F5 # jwt-secret-key-for-api-gateway
+  RATE_LIMIT_SECRET: cmF0ZS1saW1pdC1zZWNyZXQta2V5 # rate-limit-secret-key
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-gateway
+  namespace: msd-treasure-hunt
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: api-gateway
+  template:
+    metadata:
+      labels:
+        app: api-gateway
+    spec:
+      containers:
+      - name: api-gateway
+        image: api-gateway:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 8080
+        envFrom:
+        - configMapRef:
+            name: api-gateway-config
+        - secretRef:
+            name: api-gateway-secret
+        livenessProbe:
+          httpGet:
+            path: /actuator/health
+            port: 8080
+          initialDelaySeconds: 60
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /actuator/health
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "300m"
+      initContainers:
+      - name: wait-for-services
+        image: busybox:1.35
+        command:
+        - sh
+        - -c
+        - |
+          echo "Waiting for all backend services..."
+          until nc -z auth-service.msd-treasure-hunt.svc.cluster.local 8081; do
+            echo "Waiting for Auth Service..."
+            sleep 5
+          done
+          until nc -z user-service.msd-treasure-hunt.svc.cluster.local 8082; do
+            echo "Waiting for User Service..."
+            sleep 5
+          done
+          until nc -z payment-service.msd-treasure-hunt.svc.cluster.local 8083; do
+            echo "Waiting for Payment Service..."
+            sleep 5
+          done
+          until nc -z treasure-service.msd-treasure-hunt.svc.cluster.local 8084; do
+            echo "Waiting for Treasure Service..."
+            sleep 5
+          done
+          echo "All backend services are ready!"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: api-gateway
+  namespace: msd-treasure-hunt
+spec:
+  selector:
+    app: api-gateway
+  ports:
+  - port: 8080
+    targetPort: 8080
+  type: ClusterIP

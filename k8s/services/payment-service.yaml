@@ -1,0 +1,108 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: payment-service-config
+  namespace: msd-treasure-hunt
+data:
+  SERVER_PORT: "8083"
+  DATABASE_URL: "postgresql://paymentservice:paymentservice123@postgres-payment.msd-infrastructure.svc.cluster.local:5432/paymentservice"
+  REDIS_URL: "redis://redis.msd-infrastructure.svc.cluster.local:6379"
+  AUTH_SERVICE_URL: "http://auth-service.msd-treasure-hunt.svc.cluster.local:8081"
+  USER_SERVICE_URL: "http://user-service.msd-treasure-hunt.svc.cluster.local:8082"
+  LOG_LEVEL: "INFO"
+  ENVIRONMENT: "kubernetes"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: payment-service-secret
+  namespace: msd-treasure-hunt
+type: Opaque
+data:
+  DATABASE_PASSWORD: cGF5bWVudHNlcnZpY2UxMjM= # paymentservice123
+  STRIPE_SECRET_KEY: c2tfdGVzdF9zdHJpcGVfc2VjcmV0X2tleQ== # sk_test_stripe_secret_key
+  RAZORPAY_KEY_SECRET: cmF6b3JwYXlfc2VjcmV0X2tleQ== # razorpay_secret_key
+  JWT_SECRET: and0LXNlY3JldC1rZXktZm9yLXBheW1lbnQtc2VydmljZQ== # jwt-secret-key-for-payment-service
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: payment-service
+  namespace: msd-treasure-hunt
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: payment-service
+  template:
+    metadata:
+      labels:
+        app: payment-service
+    spec:
+      containers:
+      - name: payment-service
+        image: payment-service:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 8083
+        envFrom:
+        - configMapRef:
+            name: payment-service-config
+        - secretRef:
+            name: payment-service-secret
+        livenessProbe:
+          httpGet:
+            path: /actuator/health
+            port: 8083
+          initialDelaySeconds: 60
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /actuator/health
+            port: 8083
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "300m"
+      initContainers:
+      - name: wait-for-postgres
+        image: busybox:1.35
+        command:
+        - sh
+        - -c
+        - |
+          until nc -z postgres-payment.msd-infrastructure.svc.cluster.local 5432; do
+            echo "Waiting for PostgreSQL..."
+            sleep 5
+          done
+          echo "PostgreSQL is ready!"
+      - name: wait-for-auth-service
+        image: busybox:1.35
+        command:
+        - sh
+        - -c
+        - |
+          until nc -z auth-service.msd-treasure-hunt.svc.cluster.local 8081; do
+            echo "Waiting for Auth Service..."
+            sleep 5
+          done
+          echo "Auth Service is ready!"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: payment-service
+  namespace: msd-treasure-hunt
+spec:
+  selector:
+    app: payment-service
+  ports:
+  - port: 8083
+    targetPort: 8083
+  type: ClusterIP

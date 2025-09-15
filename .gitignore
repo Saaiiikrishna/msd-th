@@ -1,0 +1,91 @@
+# IDE
+.idea/
+.vscode/
+.sts4-cache/
+*.iml
+*.ipr
+*.iws
+.project
+.classpath
+.factorypath
+.settings/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+*.tmp
+*.temp
+
+# Logs
+*.log
+logs/
+log/
+
+# Java & Spring
+*.jar
+*.war
+*.ear
+*.class
+target/
+
+# Gradle
+.gradle/
+build/
+gradlew
+gradlew.bat
+gradle/
+
+# Node / Frontend
+node_modules/
+.env
+.env.*
+!.env.example
+
+# Google OAuth credentials (NEVER commit these)
+**/google-credentials.json
+**/client_secret_*.json
+auth-service/.env
+frontend/.env.local
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+dist/
+out/
+.next/
+.nuxt/
+.svelte-kit/
+.turbo/
+
+# Package manager lock files (keep package-lock.json but ignore others)
+yarn.lock
+pnpm-lock.yaml
+
+# Runtime and cache
+.cache/
+.parcel-cache/
+.nyc_output/
+coverage/
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Docker
+.dockerignore
+
+# Kubernetes
+*.kubeconfig
+
+# Backup files
+*.bak
+*.backup
+*.orig
+
+# Test results
+test-results/
+junit.xml

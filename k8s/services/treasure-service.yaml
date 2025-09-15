@@ -1,0 +1,108 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: treasure-service-config
+  namespace: msd-treasure-hunt
+data:
+  SERVER_PORT: "8084"
+  DATABASE_URL: "postgresql://treasureservice:treasureservice123@postgres-treasure.msd-infrastructure.svc.cluster.local:5432/treasureservice"
+  REDIS_URL: "redis://redis.msd-infrastructure.svc.cluster.local:6379"
+  AUTH_SERVICE_URL: "http://auth-service.msd-treasure-hunt.svc.cluster.local:8081"
+  USER_SERVICE_URL: "http://user-service.msd-treasure-hunt.svc.cluster.local:8082"
+  PAYMENT_SERVICE_URL: "http://payment-service.msd-treasure-hunt.svc.cluster.local:8083"
+  LOG_LEVEL: "INFO"
+  ENVIRONMENT: "kubernetes"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: treasure-service-secret
+  namespace: msd-treasure-hunt
+type: Opaque
+data:
+  DATABASE_PASSWORD: dHJlYXN1cmVzZXJ2aWNlMTIz # treasureservice123
+  JWT_SECRET: and0LXNlY3JldC1rZXktZm9yLXRyZWFzdXJlLXNlcnZpY2U= # jwt-secret-key-for-treasure-service
+  GOOGLE_MAPS_API_KEY: Z29vZ2xlX21hcHNfYXBpX2tleQ== # google_maps_api_key
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: treasure-service
+  namespace: msd-treasure-hunt
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: treasure-service
+  template:
+    metadata:
+      labels:
+        app: treasure-service
+    spec:
+      containers:
+      - name: treasure-service
+        image: treasure-service:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 8084
+        envFrom:
+        - configMapRef:
+            name: treasure-service-config
+        - secretRef:
+            name: treasure-service-secret
+        livenessProbe:
+          httpGet:
+            path: /actuator/health
+            port: 8084
+          initialDelaySeconds: 60
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /actuator/health
+            port: 8084
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "300m"
+      initContainers:
+      - name: wait-for-postgres
+        image: busybox:1.35
+        command:
+        - sh
+        - -c
+        - |
+          until nc -z postgres-treasure.msd-infrastructure.svc.cluster.local 5432; do
+            echo "Waiting for PostgreSQL..."
+            sleep 5
+          done
+          echo "PostgreSQL is ready!"
+      - name: wait-for-auth-service
+        image: busybox:1.35
+        command:
+        - sh
+        - -c
+        - |
+          until nc -z auth-service.msd-treasure-hunt.svc.cluster.local 8081; do
+            echo "Waiting for Auth Service..."
+            sleep 5
+          done
+          echo "Auth Service is ready!"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: treasure-service
+  namespace: msd-treasure-hunt
+spec:
+  selector:
+    app: treasure-service
+  ports:
+  - port: 8084
+    targetPort: 8084
+  type: ClusterIP

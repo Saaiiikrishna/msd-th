@@ -1,0 +1,18 @@
+syntax = "proto3";
+package payments.v1;
+option java_multiple_files = true;
+option java_package = "com.mysillydreams.payments.v1";
+
+message CreatePaymentLinkRequest {
+  string enrollment_id = 1;
+  string user_id = 2;
+  string currency = 3;     // "INR","USD","EUR"
+  string amount = 4;       // decimal as string
+  string purpose = 5;      // "TREASURE_PLAN"
+  string plan_id = 6;
+}
+message CreatePaymentLinkResponse { string payment_link = 1; string payment_id = 2; }
+
+service PaymentsService {
+  rpc CreatePaymentLink(CreatePaymentLinkRequest) returns (CreatePaymentLinkResponse);
+}

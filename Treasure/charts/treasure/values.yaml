@@ -1,0 +1,61 @@
+image:
+  repository: ghcr.io/mysillydreams/treasure
+  tag: "1.0.0"
+  pullPolicy: IfNotPresent
+
+replicaCount: 2
+
+resources:
+  requests:
+    cpu: "250m"
+    memory: "512Mi"
+  limits:
+    cpu: "1"
+    memory: "1Gi"
+
+env:
+  SPRING_PROFILES_ACTIVE: "prod"
+  SPRING_DATASOURCE_URL: "jdbc:postgresql://postgres:5432/treasure"
+  SPRING_DATASOURCE_USERNAME: "treasure"
+  SPRING_DATASOURCE_PASSWORD: "treasure"
+  SPRING_REDIS_HOST: "redis"
+  SPRING_REDIS_PORT: "6379"
+  SPRING_KAFKA_BOOTSTRAP_SERVERS: "kafka:9092"
+  ZIPKIN_ENDPOINT: "http://zipkin:9411/api/v2/spans"
+
+grpc:
+  serverPort: 9090
+
+service:
+  type: ClusterIP
+  port: 8080
+
+ingress:
+  enabled: false
+  className: ""
+  hosts: []
+  tls: []
+
+hpa:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 6
+  targetCPUUtilizationPercentage: 70
+
+kafkaTopics:
+  - name: treasure.enrollment.created
+    partitions: 6
+  - name: treasure.enrollment.approval_requested
+    partitions: 3
+  - name: treasure.enrollment.approved
+    partitions: 3
+  - name: treasure.payment.requested
+    partitions: 6
+  - name: treasure.task.completed
+    partitions: 6
+  - name: treasure.user.level_up
+    partitions: 3
+  - name: treasure.plan.updated
+    partitions: 3
+  - name: payments.status.updated
+    partitions: 6

@@ -1,0 +1,48 @@
+syntax = "proto3";
+package treasure.enrollment.v1;
+option java_multiple_files = true;
+option java_package = "com.mysillydreams.treasure.grpc.enrollment.v1";
+option java_outer_classname = "TreasureEnrollmentProto";
+
+import "google/protobuf/empty.proto";
+import "common.proto";
+
+service TreasureEnrollmentService {
+  rpc Enroll(EnrollRequest) returns (EnrollResponse);
+  rpc Approve(ApproveRequest) returns (EnrollResponse);
+  rpc Reject(RejectRequest) returns (google.protobuf.Empty);
+  rpc Cancel(CancelRequest) returns (google.protobuf.Empty);
+
+  rpc CompleteTask(CompleteTaskRequest) returns (CompleteTaskResponse);
+
+  rpc GetUserLevels(GetUserLevelsRequest) returns (treasure.common.v1.UserLevelSummary);
+  rpc RecalculateProgress(GetUserLevelsRequest) returns (google.protobuf.Empty);
+}
+
+message EnrollRequest {
+  string plan_id = 1;
+  string user_id = 2;
+  treasure.common.v1.EnrollmentType enrollment_type = 3;
+  string team_name = 4; // Optional, required for TEAM enrollment
+  int32 team_size = 5;  // Optional, required for TEAM enrollment
+}
+message EnrollResponse {
+  string enrollment_id = 1;
+  treasure.common.v1.EnrollmentMode mode = 2;
+  treasure.common.v1.EnrollmentStatus status = 3;
+  treasure.common.v1.PaymentStatus payment_status = 4;
+  string payment_link = 5;
+  string registration_id = 6;
+  treasure.common.v1.EnrollmentType enrollment_type = 7;
+  string team_name = 8;
+  int32 team_size = 9;
+}
+
+message ApproveRequest { string enrollment_id = 1; string approved_by = 2; }
+message RejectRequest  { string enrollment_id = 1; string rejected_by = 2; string reason = 3; }
+message CancelRequest  { string enrollment_id = 1; string cancelled_by = 2; }
+
+message CompleteTaskRequest { string enrollment_id = 1; string task_id = 2; }
+message CompleteTaskResponse { string task_progress_id = 1; string status = 2; }
+
+message GetUserLevelsRequest { string user_id = 1; }

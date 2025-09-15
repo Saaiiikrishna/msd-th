@@ -1,0 +1,413 @@
+# User Service Configuration
+# Spring Boot 3.x, Java 21, WebFlux for outbound calls
+
+spring:
+  application:
+    name: user-service
+  
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
+  
+  # Database Configuration
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:userservice_dev}
+    username: ${DB_USER:userservice_dev}
+    password: ${DB_PASS:userservice_dev_password}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      connection-timeout: 20000
+      maximum-pool-size: 10
+      minimum-idle: 5
+      idle-timeout: 300000
+      max-lifetime: 1200000
+      leak-detection-threshold: 60000
+  
+  # JPA Configuration
+  jpa:
+    hibernate:
+      ddl-auto: none # Use Flyway for schema management
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: false
+        show_sql: false
+        jdbc:
+          time_zone: UTC
+    show-sql: false
+    open-in-view: false
+  
+  # Flyway Configuration
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    baseline-version: 0
+    locations: classpath:db/migration
+    validate-on-migrate: true
+    clean-disabled: true
+  
+  # Redis Configuration
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      database: ${REDIS_DB:0}
+      timeout: 2000ms
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 0
+
+  # Cache Configuration
+  cache:
+    type: redis
+    redis:
+      time-to-live: 300s
+      cache-null-values: false
+      key-prefix: "user-service:"
+      use-key-prefix: true
+  
+  # Kafka Configuration
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      acks: all
+      retries: 3
+      retry-backoff-ms: 1000
+      delivery-timeout-ms: 30000
+      request-timeout-ms: 10000
+      batch-size: 16384
+      linger-ms: 10
+      buffer-memory: 33554432
+      compression-type: snappy
+      properties:
+        enable.idempotence: true
+        max.in.flight.requests.per.connection: 5
+    consumer:
+      group-id: ${KAFKA_CONSUMER_GROUP:user-service-group}
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
+      auto-offset-reset: earliest
+      enable-auto-commit: false
+      session-timeout-ms: 30000
+      heartbeat-interval-ms: 10000
+      max-poll-records: 100
+      max-poll-interval-ms: 300000
+      properties:
+        spring.json.trusted.packages: "com.mysillydreams.userservice.event,com.mysillydreams.userservice.dto"
+        spring.deserializer.value.delegate.class: org.springframework.kafka.support.serializer.JsonDeserializer
+    admin:
+      auto-create: true
+      properties:
+        request.timeout.ms: 10000
+  
+  # Vault Configuration
+  cloud:
+    compatibility-verifier:
+      enabled: false
+    vault:
+      enabled: ${VAULT_ENABLED:true}
+      uri: ${VAULT_URI:http://localhost:8200}
+      token: ${VAULT_TOKEN:root-token}
+      authentication: TOKEN
+      connection-timeout: 5000
+      read-timeout: 15000
+      transit:
+        enabled: true
+        backend: ${VAULT_TRANSIT_BACKEND:transit}
+        key-name: ${VAULT_TRANSIT_KEY:user_pii}
+      kv:
+        enabled: true
+        backend: ${VAULT_KV_BACKEND:secret}
+        default-context: user-service
+      # Automatic Vault Initialization
+      initialization:
+        enabled: ${VAULT_INITIALIZATION_ENABLED:true}
+        retry-attempts: ${VAULT_INITIALIZATION_RETRY_ATTEMPTS:3}
+        retry-delay-seconds: ${VAULT_INITIALIZATION_RETRY_DELAY:5}
+  
+  # Security Configuration
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8080/realms/treasure-hunt}
+
+# Server Configuration
+server:
+  port: ${SERVER_PORT:8083}
+  # Removed context-path to fix service-to-service communication
+  # Controllers will handle the full path mapping
+  error:
+    include-message: always
+    include-binding-errors: always
+    include-stacktrace: on_param
+  compression:
+    enabled: true
+    mime-types: application/json,application/xml,text/html,text/xml,text/plain
+
+# Management & Actuator
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+      base-path: /actuator
+  endpoint:
+    health:
+      show-details: when_authorized
+      show-components: always
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+  tracing:
+    sampling:
+      probability: ${TRACING_SAMPLE_RATE:0.1}
+
+# Application Specific Configuration
+app:
+  # Authentication Configuration
+  auth:
+    cache-ttl: ${AUTH_CACHE_TTL:30s}
+  
+  # PII Encryption & HMAC
+  encryption:
+    hmac-key-name: ${VAULT_HMAC_KEY:user_search_hmac}
+  
+  # GDPR/DPDP Compliance
+  gdpr:
+    retention-days: ${GDPR_RETENTION_DAYS:90}
+    purge-schedule: ${GDPR_PURGE_SCHEDULE:0 0 2 * * ?} # Daily at 2 AM
+  
+  # Rate Limiting
+  rate-limit:
+    internal-lookup-rps: ${RATE_LIMIT_INTERNAL_RPS:200}
+    public-api-rps: ${RATE_LIMIT_PUBLIC_RPS:100}
+  
+  # Event Publishing Configuration
+  events:
+    kafka:
+      enabled: ${KAFKA_EVENTS_ENABLED:true}
+      topics:
+        user-events: ${KAFKA_TOPIC_USER_EVENTS:user-events}
+        consent-events: ${KAFKA_TOPIC_CONSENT_EVENTS:consent-events}
+        gdpr-events: ${KAFKA_TOPIC_GDPR_EVENTS:gdpr-events}
+        audit-events: ${KAFKA_TOPIC_AUDIT_EVENTS:audit-events}
+    outbox:
+      enabled: ${OUTBOX_EVENTS_ENABLED:true}
+      batch-size: ${OUTBOX_BATCH_SIZE:100}
+      max-retry-attempts: ${OUTBOX_MAX_RETRIES:3}
+      cleanup-days: ${OUTBOX_CLEANUP_DAYS:7}
+
+  # Cache Configuration
+  cache:
+    redis:
+      enabled: ${CACHE_REDIS_ENABLED:true}
+    default-ttl: ${CACHE_DEFAULT_TTL:300s}
+    user-lookup:
+      ttl: ${CACHE_USER_LOOKUP_TTL:60s}
+    user-profile:
+      ttl: ${CACHE_USER_PROFILE_TTL:600s}
+    role-hierarchy:
+      ttl: ${CACHE_ROLE_HIERARCHY_TTL:3600s}
+    consent-status:
+      ttl: ${CACHE_CONSENT_STATUS_TTL:1800s}
+    address-lookup:
+      ttl: ${CACHE_ADDRESS_LOOKUP_TTL:900s}
+      user-consents-changed: ${KAFKA_TOPIC_USER_CONSENTS_CHANGED:user.consents.changed.v1}
+
+  # Security Configuration
+  security:
+    internal-api-keys: ${INTERNAL_API_KEYS:auth-service-internal-key-12345,admin-service-key-67890}
+
+  # WebClient Configuration
+  webclient:
+    connection-timeout: ${WEBCLIENT_CONNECTION_TIMEOUT:5000}
+    read-timeout: ${WEBCLIENT_READ_TIMEOUT:10000}
+    write-timeout: ${WEBCLIENT_WRITE_TIMEOUT:10000}
+    max-memory-size: ${WEBCLIENT_MAX_MEMORY_SIZE:1048576} # 1MB
+
+# Logging Configuration
+logging:
+  level:
+    com.mysillydreams.userservice: ${LOG_LEVEL:INFO}
+    org.springframework.security: ${SECURITY_LOG_LEVEL:WARN}
+    org.springframework.web: ${WEB_LOG_LEVEL:WARN}
+    org.hibernate.SQL: ${SQL_LOG_LEVEL:WARN}
+    org.springframework.kafka: ${KAFKA_LOG_LEVEL:WARN}
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level [%X{traceId:-},%X{spanId:-}] %logger{36} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level [%X{traceId:-},%X{spanId:-}] %logger{36} - %msg%n"
+
+---
+# Development Profile
+spring:
+  config:
+    activate:
+      on-profile: dev
+
+  # Development Database
+  datasource:
+    url: jdbc:postgresql://localhost:5432/userservice_dev
+    username: userservice_dev
+    password: userservice_dev
+  
+  # Development JPA
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+  
+  # Development Vault (can be disabled for local dev)
+  cloud:
+    vault:
+      enabled: false # Use MockEncryptionService for dev
+
+# Development Logging
+logging:
+  level:
+    com.mysillydreams.userservice: DEBUG
+    org.springframework.web: INFO
+    org.springframework.security: DEBUG
+
+# Development specific configs
+app:
+  auth:
+    cache-ttl: 10s # Shorter cache for dev
+  rate-limit:
+    internal-lookup-rps: 1000 # Higher limits for dev
+    public-api-rps: 500
+
+---
+# Staging Profile
+spring:
+  config:
+    activate:
+      on-profile: staging
+
+  # Staging Database
+  datasource:
+    url: jdbc:postgresql://${DB_HOST}:${DB_PORT}/${DB_NAME}
+    username: ${DB_USER}
+    password: ${DB_PASS}
+  
+  # Staging Vault
+  cloud:
+    vault:
+      enabled: true
+      uri: ${VAULT_URI}
+      token: ${VAULT_TOKEN}
+
+# Staging Logging
+logging:
+  level:
+    com.mysillydreams.userservice: INFO
+    org.springframework.security: WARN
+
+---
+# Production Profile
+spring:
+  config:
+    activate:
+      on-profile: prod
+
+  # Production Database
+  datasource:
+    url: jdbc:postgresql://${DB_HOST}:${DB_PORT}/${DB_NAME}
+    username: ${DB_USER}
+    password: ${DB_PASS}
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 10
+  
+  # Production Vault
+  cloud:
+    vault:
+      enabled: true
+      uri: ${VAULT_URI}
+      token: ${VAULT_TOKEN}
+
+# Production Logging
+logging:
+  level:
+    com.mysillydreams.userservice: INFO
+    org.springframework.security: WARN
+    org.springframework.web: WARN
+  file:
+    name: /var/log/user-service/application.log
+
+# Production specific configs
+management:
+  tracing:
+    sampling:
+      probability: 0.01 # Lower sampling in prod
+
+app:
+  gdpr:
+    retention-days: 30 # Stricter retention in prod
+
+---
+# Docker Profile
+spring:
+  config:
+    activate:
+      on-profile: docker
+
+  # Docker Database Configuration
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:postgres-user}:${DB_PORT:5432}/${DB_NAME:userservice}
+    username: ${DB_USER:userservice}
+    password: ${DB_PASS:userservice123}
+
+  # Docker JPA Configuration
+  jpa:
+    hibernate:
+      ddl-auto: none
+    show-sql: false
+
+  # Docker Vault Configuration
+  cloud:
+    vault:
+      enabled: true
+      uri: ${VAULT_URI:http://vault:8200}
+      token: ${VAULT_TOKEN:myroot}
+      initialization:
+        enabled: ${VAULT_INITIALIZATION_ENABLED:true}
+        retry-attempts: ${VAULT_INITIALIZATION_RETRY_ATTEMPTS:3}
+        retry-delay-seconds: ${VAULT_INITIALIZATION_RETRY_DELAY:5}
+
+# Docker Logging
+logging:
+  level:
+    com.mysillydreams.userservice: DEBUG
+    com.mysillydreams.userservice.repository: DEBUG
+    com.mysillydreams.userservice.service: DEBUG
+    com.mysillydreams.userservice.config: DEBUG
+    org.springframework.security: DEBUG
+    org.springframework.web: DEBUG
+    org.springframework.data.jpa: DEBUG
+    org.springframework.data.jpa.repository: DEBUG
+    org.springframework.boot.autoconfigure.orm.jpa: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+    org.hibernate.engine.query: DEBUG
+    org.hibernate.hql: DEBUG
+    org.springframework.transaction: DEBUG
+    org.springframework.orm.jpa: DEBUG
+    org.springframework.boot.autoconfigure.flyway: DEBUG
+    org.flywaydb: DEBUG
+    org.springframework.beans.factory: DEBUG
+    org.springframework.context: DEBUG
+
+# Docker specific configs
+app:
+  auth:
+    service-url: http://auth-service:8081
+    cache-ttl: 30s
+  rate-limit:
+    internal-lookup-rps: 200
+    public-api-rps: 100

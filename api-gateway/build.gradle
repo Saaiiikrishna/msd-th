@@ -1,0 +1,156 @@
+plugins {
+    id 'java'
+    id 'org.springframework.boot' version '3.4.0'
+    id 'io.spring.dependency-management' version '1.1.6'
+}
+
+group = 'com.mysillydreams'
+version = '1.0.0'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
+configurations {
+    compileOnly {
+        extendsFrom annotationProcessor
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+ext {
+    set('springCloudVersion', "2024.0.0")
+}
+
+dependencies {
+    // Spring Boot Starters
+    implementation 'org.springframework.boot:spring-boot-starter-webflux'
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    implementation 'org.springframework.boot:spring-boot-starter-security'
+    implementation 'org.springframework.boot:spring-boot-starter-oauth2-resource-server'
+
+    implementation 'org.springframework.boot:spring-boot-starter-data-redis-reactive'
+    
+    // Spring Cloud Gateway
+    implementation 'org.springframework.cloud:spring-cloud-starter-gateway'
+    implementation 'org.springframework.cloud:spring-cloud-starter-loadbalancer'
+    implementation 'org.springframework.cloud:spring-cloud-starter-circuitbreaker-reactor-resilience4j'
+    
+
+    
+    // Monitoring and Metrics
+    implementation 'io.micrometer:micrometer-registry-prometheus'
+    implementation 'io.micrometer:micrometer-tracing-bridge-brave'
+    
+    // Validation
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+    
+    // JSON Processing
+    implementation 'com.fasterxml.jackson.core:jackson-databind'
+    implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'
+    
+    // Lombok
+    compileOnly 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
+    
+    // Development Tools
+    developmentOnly 'org.springframework.boot:spring-boot-devtools'
+    
+    // Test Dependencies
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'io.projectreactor:reactor-test'
+    testImplementation 'org.springframework.security:spring-security-test'
+    testImplementation 'org.testcontainers:junit-jupiter'
+    testImplementation 'org.testcontainers:redis'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+dependencyManagement {
+    imports {
+        mavenBom "org.springframework.cloud:spring-cloud-dependencies:${springCloudVersion}"
+    }
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+}
+
+// Gradle Wrapper
+wrapper {
+    gradleVersion = '8.10'
+    distributionType = Wrapper.DistributionType.BIN
+}
+
+// Build Configuration
+jar {
+    enabled = false
+}
+
+bootJar {
+    archiveFileName = "${project.name}-${project.version}.jar"
+    mainClass = 'com.mysillydreams.gateway.ApiGatewayApplication'
+}
+
+// JVM Arguments for Development
+bootRun {
+    jvmArgs = [
+        '-Dspring.profiles.active=dev',
+        '-Xmx512m',
+        '-Xms256m'
+    ]
+}
+
+// Test Configuration
+test {
+    useJUnitPlatform()
+    testLogging {
+        events "passed", "skipped", "failed"
+        exceptionFormat "full"
+    }
+    systemProperty 'spring.profiles.active', 'test'
+}
+
+// Code Quality
+tasks.register('checkstyle') {
+    group = 'verification'
+    description = 'Run checkstyle analysis'
+}
+
+// Docker Build Support
+tasks.register('dockerBuild') {
+    group = 'docker'
+    description = 'Build Docker image'
+    doLast {
+        exec {
+            commandLine 'docker', 'build', '-t', "treasurehunt/api-gateway:${version}", '.'
+        }
+    }
+}
+
+// Health Check Task
+tasks.register('healthCheck') {
+    group = 'verification'
+    description = 'Check if the application is healthy'
+    doLast {
+        try {
+            def url = new URL('http://localhost:8080/actuator/health')
+            def connection = url.openConnection()
+            connection.requestMethod = 'GET'
+            connection.connectTimeout = 5000
+            connection.readTimeout = 5000
+            
+            if (connection.responseCode == 200) {
+                println "✅ API Gateway is healthy"
+            } else {
+                throw new GradleException("❌ API Gateway health check failed: ${connection.responseCode}")
+            }
+        } catch (Exception e) {
+            throw new GradleException("❌ API Gateway health check failed: ${e.message}")
+        }
+    }
+}

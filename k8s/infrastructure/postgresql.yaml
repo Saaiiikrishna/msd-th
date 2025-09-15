@@ -1,0 +1,388 @@
+---
+# PostgreSQL for User Service
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-user-pvc
+  namespace: msd-infrastructure
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-user-config
+  namespace: msd-infrastructure
+data:
+  POSTGRES_DB: "userservice"
+  POSTGRES_USER: "userservice"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: postgres-user-secret
+  namespace: msd-infrastructure
+type: Opaque
+data:
+  POSTGRES_PASSWORD: dXNlcnNlcnZpY2UxMjM= # userservice123
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres-user
+  namespace: msd-infrastructure
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres-user
+  template:
+    metadata:
+      labels:
+        app: postgres-user
+    spec:
+      containers:
+      - name: postgres
+        image: postgis/postgis:15-3.4
+        ports:
+        - containerPort: 5432
+        envFrom:
+        - configMapRef:
+            name: postgres-user-config
+        - secretRef:
+            name: postgres-user-secret
+        volumeMounts:
+        - name: postgres-storage
+          mountPath: /var/lib/postgresql/data
+        livenessProbe:
+          exec:
+            command:
+            - pg_isready
+            - -U
+            - userservice
+            - -d
+            - userservice
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          exec:
+            command:
+            - pg_isready
+            - -U
+            - userservice
+            - -d
+            - userservice
+          initialDelaySeconds: 5
+          periodSeconds: 5
+      volumes:
+      - name: postgres-storage
+        persistentVolumeClaim:
+          claimName: postgres-user-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-user
+  namespace: msd-infrastructure
+spec:
+  selector:
+    app: postgres-user
+  ports:
+  - port: 5432
+    targetPort: 5432
+  type: ClusterIP
+---
+# PostgreSQL for Payment Service
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-payment-pvc
+  namespace: msd-infrastructure
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-payment-config
+  namespace: msd-infrastructure
+data:
+  POSTGRES_DB: "paymentservice"
+  POSTGRES_USER: "paymentservice"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: postgres-payment-secret
+  namespace: msd-infrastructure
+type: Opaque
+data:
+  POSTGRES_PASSWORD: cGF5bWVudHNlcnZpY2UxMjM= # paymentservice123
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres-payment
+  namespace: msd-infrastructure
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres-payment
+  template:
+    metadata:
+      labels:
+        app: postgres-payment
+    spec:
+      containers:
+      - name: postgres
+        image: postgis/postgis:15-3.4
+        ports:
+        - containerPort: 5432
+        envFrom:
+        - configMapRef:
+            name: postgres-payment-config
+        - secretRef:
+            name: postgres-payment-secret
+        volumeMounts:
+        - name: postgres-storage
+          mountPath: /var/lib/postgresql/data
+        livenessProbe:
+          exec:
+            command:
+            - pg_isready
+            - -U
+            - paymentservice
+            - -d
+            - paymentservice
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          exec:
+            command:
+            - pg_isready
+            - -U
+            - paymentservice
+            - -d
+            - paymentservice
+          initialDelaySeconds: 5
+          periodSeconds: 5
+      volumes:
+      - name: postgres-storage
+        persistentVolumeClaim:
+          claimName: postgres-payment-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-payment
+  namespace: msd-infrastructure
+spec:
+  selector:
+    app: postgres-payment
+  ports:
+  - port: 5432
+    targetPort: 5432
+  type: ClusterIP
+---
+# PostgreSQL for Treasure Service
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-treasure-pvc
+  namespace: msd-infrastructure
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-treasure-config
+  namespace: msd-infrastructure
+data:
+  POSTGRES_DB: "treasureservice"
+  POSTGRES_USER: "treasureservice"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: postgres-treasure-secret
+  namespace: msd-infrastructure
+type: Opaque
+data:
+  POSTGRES_PASSWORD: dHJlYXN1cmVzZXJ2aWNlMTIz # treasureservice123
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres-treasure
+  namespace: msd-infrastructure
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres-treasure
+  template:
+    metadata:
+      labels:
+        app: postgres-treasure
+    spec:
+      containers:
+      - name: postgres
+        image: postgis/postgis:15-3.4
+        ports:
+        - containerPort: 5432
+        envFrom:
+        - configMapRef:
+            name: postgres-treasure-config
+        - secretRef:
+            name: postgres-treasure-secret
+        volumeMounts:
+        - name: postgres-storage
+          mountPath: /var/lib/postgresql/data
+        livenessProbe:
+          exec:
+            command:
+            - pg_isready
+            - -U
+            - treasureservice
+            - -d
+            - treasureservice
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          exec:
+            command:
+            - pg_isready
+            - -U
+            - treasureservice
+            - -d
+            - treasureservice
+          initialDelaySeconds: 5
+          periodSeconds: 5
+      volumes:
+      - name: postgres-storage
+        persistentVolumeClaim:
+          claimName: postgres-treasure-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-treasure
+  namespace: msd-infrastructure
+spec:
+  selector:
+    app: postgres-treasure
+  ports:
+  - port: 5432
+    targetPort: 5432
+  type: ClusterIP
+---
+# PostgreSQL for Keycloak
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-keycloak-pvc
+  namespace: msd-infrastructure
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-keycloak-config
+  namespace: msd-infrastructure
+data:
+  POSTGRES_DB: "keycloak"
+  POSTGRES_USER: "keycloak"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: postgres-keycloak-secret
+  namespace: msd-infrastructure
+type: Opaque
+data:
+  POSTGRES_PASSWORD: a2V5Y2xvYWsxMjM= # keycloak123
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres-keycloak
+  namespace: msd-infrastructure
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres-keycloak
+  template:
+    metadata:
+      labels:
+        app: postgres-keycloak
+    spec:
+      containers:
+      - name: postgres
+        image: postgis/postgis:15-3.4
+        ports:
+        - containerPort: 5432
+        envFrom:
+        - configMapRef:
+            name: postgres-keycloak-config
+        - secretRef:
+            name: postgres-keycloak-secret
+        volumeMounts:
+        - name: postgres-storage
+          mountPath: /var/lib/postgresql/data
+        livenessProbe:
+          exec:
+            command:
+            - pg_isready
+            - -U
+            - keycloak
+            - -d
+            - keycloak
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          exec:
+            command:
+            - pg_isready
+            - -U
+            - keycloak
+            - -d
+            - keycloak
+          initialDelaySeconds: 5
+          periodSeconds: 5
+      volumes:
+      - name: postgres-storage
+        persistentVolumeClaim:
+          claimName: postgres-keycloak-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-keycloak
+  namespace: msd-infrastructure
+spec:
+  selector:
+    app: postgres-keycloak
+  ports:
+  - port: 5432
+    targetPort: 5432
+  type: ClusterIP

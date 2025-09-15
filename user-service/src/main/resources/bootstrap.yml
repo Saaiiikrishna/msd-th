@@ -1,0 +1,127 @@
+# Bootstrap configuration for Spring Boot 3.x
+# This file is processed BEFORE application.yml and enables external configuration loading
+
+spring:
+  application:
+    name: user-service
+
+  # Cloud Configuration
+  cloud:
+    # Vault Configuration (Bootstrap)
+    vault:
+      enabled: ${VAULT_ENABLED:true}
+      uri: ${VAULT_URI:http://localhost:8200}
+      token: ${VAULT_TOKEN:root-token}
+      authentication: TOKEN
+      connection-timeout: 5000
+      read-timeout: 15000
+      fail-fast: ${VAULT_FAIL_FAST:false}
+
+      # Transit Engine for PII Encryption
+      transit:
+        enabled: true
+        backend: ${VAULT_TRANSIT_BACKEND:transit}
+        key-name: ${VAULT_TRANSIT_KEY:user_pii}
+
+      # KV Engine for Configuration
+      kv:
+        enabled: true
+        backend: ${VAULT_KV_BACKEND:secret}
+        default-context: user-service
+        profile-separator: ','
+
+    # ZooKeeper Configuration (Optional - for service discovery)
+    zookeeper:
+      enabled: ${ZOOKEEPER_ENABLED:false}
+      connect-string: ${ZOOKEEPER_CONNECT:localhost:2181}
+      config:
+        enabled: false # Use Vault for config, not ZooKeeper
+        root: /config
+        default-context: user-service
+        profile-separator: ','
+        fail-fast: false
+      discovery:
+        enabled: false # Disable service discovery for now
+        register: false
+
+# Server Configuration (Bootstrap)
+server:
+  port: ${SERVER_PORT:8082}
+
+# Logging Configuration (Bootstrap)
+logging:
+  level:
+    org.springframework.cloud.vault: ${VAULT_LOG_LEVEL:INFO}
+    org.springframework.cloud.zookeeper: ${ZOOKEEPER_LOG_LEVEL:WARN}
+
+---
+# Development Profile (Bootstrap)
+spring:
+  config:
+    activate:
+      on-profile: dev
+  cloud:
+    vault:
+      enabled: false # Use MockEncryptionService for dev
+    zookeeper:
+      enabled: false
+
+---
+# Staging Profile (Bootstrap)
+spring:
+  config:
+    activate:
+      on-profile: staging
+  cloud:
+    vault:
+      enabled: true
+      uri: ${VAULT_URI}
+      token: ${VAULT_TOKEN}
+      fail-fast: true
+
+---
+# Production Profile (Bootstrap)
+spring:
+  config:
+    activate:
+      on-profile: prod
+  cloud:
+    vault:
+      enabled: true
+      uri: ${VAULT_URI}
+      token: ${VAULT_TOKEN}
+      fail-fast: true
+      connection-timeout: 3000
+      read-timeout: 10000
+
+# Enable debug mode for detailed startup information
+debug: true
+
+# Management endpoints for debugging
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "health,info,env,configprops,beans"
+  endpoint:
+    health:
+      show-details: always
+
+# DETAILED logging for debugging Spring Cloud Bootstrap
+logging:
+  level:
+    root: ${ROOT_LOG_LEVEL:INFO}
+    # Spring Cloud Bootstrap debugging
+    org.springframework.cloud.bootstrap: DEBUG
+    org.springframework.cloud.context: DEBUG
+    org.springframework.cloud.config: DEBUG
+    # ZooKeeper specific debugging
+    org.springframework.cloud.zookeeper: DEBUG
+    org.apache.curator: DEBUG
+    org.apache.zookeeper: DEBUG
+    # Vault debugging (if causing conflicts)
+    org.springframework.cloud.vault: DEBUG
+    org.springframework.vault: DEBUG
+    # Configuration property source debugging
+    org.springframework.core.env: DEBUG
+    org.springframework.boot.context.config: DEBUG

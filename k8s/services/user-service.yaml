@@ -1,0 +1,105 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: user-service-config
+  namespace: msd-treasure-hunt
+data:
+  SERVER_PORT: "8082"
+  DATABASE_URL: "postgresql://userservice:userservice123@postgres-user.msd-infrastructure.svc.cluster.local:5432/userservice"
+  REDIS_URL: "redis://redis.msd-infrastructure.svc.cluster.local:6379"
+  AUTH_SERVICE_URL: "http://auth-service.msd-treasure-hunt.svc.cluster.local:8081"
+  LOG_LEVEL: "INFO"
+  ENVIRONMENT: "kubernetes"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: user-service-secret
+  namespace: msd-treasure-hunt
+type: Opaque
+data:
+  DATABASE_PASSWORD: dXNlcnNlcnZpY2UxMjM= # userservice123
+  JWT_SECRET: and0LXNlY3JldC1rZXktZm9yLXVzZXItc2VydmljZQ== # jwt-secret-key-for-user-service
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: user-service
+  namespace: msd-treasure-hunt
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: user-service
+  template:
+    metadata:
+      labels:
+        app: user-service
+    spec:
+      containers:
+      - name: user-service
+        image: user-service:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 8082
+        envFrom:
+        - configMapRef:
+            name: user-service-config
+        - secretRef:
+            name: user-service-secret
+        livenessProbe:
+          httpGet:
+            path: /actuator/health
+            port: 8082
+          initialDelaySeconds: 60
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /actuator/health
+            port: 8082
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "300m"
+      initContainers:
+      - name: wait-for-postgres
+        image: busybox:1.35
+        command:
+        - sh
+        - -c
+        - |
+          until nc -z postgres-user.msd-infrastructure.svc.cluster.local 5432; do
+            echo "Waiting for PostgreSQL..."
+            sleep 5
+          done
+          echo "PostgreSQL is ready!"
+      - name: wait-for-auth-service
+        image: busybox:1.35
+        command:
+        - sh
+        - -c
+        - |
+          until nc -z auth-service.msd-treasure-hunt.svc.cluster.local 8081; do
+            echo "Waiting for Auth Service..."
+            sleep 5
+          done
+          echo "Auth Service is ready!"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: user-service
+  namespace: msd-treasure-hunt
+spec:
+  selector:
+    app: user-service
+  ports:
+  - port: 8082
+    targetPort: 8082
+  type: ClusterIP
